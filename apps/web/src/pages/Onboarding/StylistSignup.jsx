@@ -137,7 +137,7 @@ export function StylistSignupPage() {
           <button onClick={() => setStep('tier')} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', marginBottom: '24px', fontSize: '14px' }}>
             ← Back
           </button>
-          <Elements stripe={stripePromise} options={{ mode: 'subscription', currency: 'usd', amount: tier === 'weekly' ? 30000 : 110000 }}>
+          <Elements stripe={stripePromise} options={{ mode: 'subscription', currency: 'usd', amount: tier === 'weekly' ? 30000 : 110000, paymentMethodCreation: 'manual' }}>
             <SignupForm tier={tier} locationId={locationId} locationName={selectedLocation?.name} />
           </Elements>
         </div>
