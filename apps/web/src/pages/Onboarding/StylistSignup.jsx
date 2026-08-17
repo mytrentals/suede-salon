@@ -229,7 +229,7 @@ function SignupForm({ tier, locationId, locationName, onBack }) {
         ← Back
       </button>
 
-      <Elements stripe={stripePromise}>
+      <Elements stripe={stripePromise} options={{ mode: 'subscription', currency: 'usd', amount: tier === 'weekly' ? 30000 : 110000 }}>
         <SignupFormContent tier={tier} locationId={locationId} locationName={locationName} />
       </Elements>
     </div>
