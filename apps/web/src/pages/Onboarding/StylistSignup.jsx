@@ -268,7 +268,15 @@ function SignupFormContent({ tier, locationId, locationName }) {
     }
 
     try {
-      const { error: submitError, paymentMethod } = await elements.submit();
+      const { error: submitError, paymentMethod } = await stripe.createPaymentMethod({
+  elements,
+  params: {
+    billing_details: {
+      name: formData.name,
+      email: formData.email,
+    },
+  },
+});
       if (submitError) {
         setError(submitError.message);
         setIsLoading(false);
