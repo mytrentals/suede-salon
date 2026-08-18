@@ -585,6 +585,118 @@ export function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Add Location Modal */}
+      {showAddLocation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
+            <h2 className="font-display text-2xl font-semibold text-navy mb-6">Add Location</h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setLocationLoading(true);
+              try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/location`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                  body: JSON.stringify(locationForm),
+                });
+                if (response.ok) { setShowAddLocation(false); showSuccess('Location added.'); await fetchData(); }
+                else { const d = await response.json(); alert(d.error || 'Failed to add location'); }
+              } catch (err) { alert('Error adding location'); }
+              setLocationLoading(false);
+            }} className="space-y-4">
+              <div>
+                <label className={labelClass}>Location Name</label>
+                <input type="text" value={locationForm.name} onChange={(e) => setLocationForm({...locationForm, name: e.target.value})} required placeholder="e.g. Clayton" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Address</label>
+                <input type="text" value={locationForm.address} onChange={(e) => setLocationForm({...locationForm, address: e.target.value})} placeholder="e.g. 123 Main St, St. Louis, MO" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Maximum Chairs</label>
+                <input type="number" value={locationForm.maxChairs} onChange={(e) => setLocationForm({...locationForm, maxChairs: parseInt(e.target.value)})} min="1" max="50" required className={inputClass} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowAddLocation(false)} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">Cancel</button>
+                <button type="submit" disabled={locationLoading} className="flex-1 rounded-sm bg-ink py-3 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40">{locationLoading ? 'Adding...' : 'Add Location'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Location Modal */}
+      {editingLocation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
+            <h2 className="font-display text-2xl font-semibold text-navy mb-6">Edit Location</h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setLocationLoading(true);
+              try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/location/${editingLocation.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                  body: JSON.stringify(locationForm),
+                });
+                if (response.ok) { setEditingLocation(null); showSuccess('Location updated.'); await fetchData(); }
+                else { const d = await response.json(); alert(d.error || 'Failed to update'); }
+              } catch (err) { alert('Error updating location'); }
+              setLocationLoading(false);
+            }} className="space-y-4">
+              <div>
+                <label className={labelClass}>Location Name</label>
+                <input type="text" value={locationForm.name} onChange={(e) => setLocationForm({...locationForm, name: e.target.value})} required className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Address</label>
+                <input type="text" value={locationForm.address} onChange={(e) => setLocationForm({...locationForm, address: e.target.value})} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Maximum Chairs</label>
+                <input type="number" value={locationForm.maxChairs} onChange={(e) => setLocationForm({...locationForm, maxChairs: parseInt(e.target.value)})} min="1" max="50" required className={inputClass} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingLocation(null)} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">Cancel</button>
+                <button type="submit" disabled={locationLoading} className="flex-1 rounded-sm bg-ink py-3 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40">{locationLoading ? 'Saving...' : 'Save Changes'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Location Modal */}
+      {confirmDeleteLocation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
+            <h2 className="font-display text-2xl font-semibold text-destructive mb-3">Delete Location</h2>
+            <p className="text-sm text-espresso/70 mb-2">You are about to delete <strong>{confirmDeleteLocation.name}</strong>.</p>
+            <ul className="text-sm text-espresso/60 space-y-1 mb-3 list-disc list-inside">
+              <li>This cannot be undone</li>
+              <li>All active stylists must be moved or deactivated first</li>
+            </ul>
+            <p className="text-sm font-medium text-destructive mb-6">Are you absolutely sure?</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDeleteLocation(null)} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">Cancel</button>
+              <button onClick={async () => {
+                setActionLoading(true);
+                try {
+                  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/location/${confirmDeleteLocation.id}`, {
+                    method: 'DELETE', headers: { 'x-admin-token': token },
+                  });
+                  if (response.ok) { setConfirmDeleteLocation(null); showSuccess('Location deleted.'); await fetchData(); }
+                  else { const d = await response.json(); alert(d.error || 'Failed to delete'); setConfirmDeleteLocation(null); }
+                } catch (err) { alert('Error deleting location'); }
+                setActionLoading(false);
+              }} disabled={actionLoading} className="flex-1 rounded-sm bg-destructive py-3 text-[0.74rem] uppercase tracking-[0.22em] text-white disabled:opacity-40">
+                {actionLoading ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </SiteLayout>
   );
 }
