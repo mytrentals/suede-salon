@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import SiteLayout from '@/components/SiteLayout';
 
 export function AdminDashboardPage() {
   const { token } = useParams();
@@ -9,9 +10,12 @@ export function AdminDashboardPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterLocation, setFilterLocation] = useState('all');
   const [requestingLink, setRequestingLink] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [showEmailForm, setShowEmailForm] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    if (token) fetchData();
+    else setLoading(false);
   }, [token]);
 
   const fetchData = async () => {
@@ -31,329 +35,261 @@ export function AdminDashboardPage() {
     setLoading(false);
   };
 
-  const requestAdminLink = async () => {
-    const email = prompt('Enter your admin email:');
-    if (!email) return;
-
+  const requestAdminLink = async (e) => {
+    e.preventDefault();
     setRequestingLink(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/request-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: adminEmail }),
       });
-
       if (response.ok) {
-        alert('Magic link sent to your email!');
+        setError('Magic link sent! Check your email.');
+        setShowEmailForm(false);
       } else {
-        alert('Failed to send link. Check that you used the correct admin email.');
+        setError('Email not recognized. Please use your admin email address.');
       }
     } catch (err) {
-      alert('Error requesting link');
+      setError('Error requesting link. Please try again.');
     }
     setRequestingLink(false);
   };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px' }}>Loading admin dashboard...</div>;
-  }
-
-  if (error) {
     return (
-      <div style={{ maxWidth: '600px', margin: '40px auto', padding: '20px', textAlign: 'center' }}>
-        <h2 style={{ color: '#c00', marginBottom: '16px' }}>{error}</h2>
-        <button
-          onClick={requestAdminLink}
-          disabled={requestingLink}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#1a1a1a',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: '600',
-          }}
-        >
-          {requestingLink ? 'Sending...' : 'Request New Link'}
-        </button>
-      </div>
+      <SiteLayout>
+        <div className="min-h-screen bg-background pt-32 flex items-center justify-center">
+          <p className="text-espresso/60 text-sm uppercase tracking-[0.2em]">Loading dashboard…</p>
+        </div>
+      </SiteLayout>
     );
   }
 
-  if (!data || !data.locations || !data.stylists) {
-    return <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>;
+  if (error || !token) {
+    return (
+      <SiteLayout>
+        <div className="min-h-screen bg-background pt-32 pb-24">
+          <div className="mx-auto max-w-[36rem] px-6 text-center">
+            <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Admin Access</span>
+            <h1 className="mt-4 font-display text-4xl font-semibold text-ink">
+              {error || 'Sign in to continue'}
+            </h1>
+            <p className="mt-4 text-base text-espresso/70">
+              Enter your admin email to receive a secure login link.
+            </p>
+
+            {!showEmailForm ? (
+              <button
+                onClick={() => setShowEmailForm(true)}
+                className="mt-8 rounded-sm bg-ink px-8 py-4 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5"
+              >
+                Request Access Link
+              </button>
+            ) : (
+              <form onSubmit={requestAdminLink} className="mt-8 text-left">
+                <label className="block mb-2 text-[0.72rem] uppercase tracking-[0.15em] text-espresso/60">
+                  Admin Email
+                </label>
+                <input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  required
+                  placeholder="your@email.com"
+                  className="w-full rounded-sm border border-border bg-card px-4 py-3 text-sm text-espresso placeholder-espresso/40 focus:outline-none focus:border-navy transition-colors duration-200 mb-4"
+                />
+                <button
+                  type="submit"
+                  disabled={requestingLink}
+                  className="w-full rounded-sm bg-ink py-4 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5 disabled:opacity-40"
+                >
+                  {requestingLink ? 'Sending…' : 'Send Magic Link'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </SiteLayout>
+    );
   }
 
-  const filteredStylists = data.stylists.filter(s => {
-    if (filterLocation !== 'all' && s.location_id !== parseInt(filterLocation)) {
-      return false;
-    }
-    if (filterStatus === 'active' && s.status !== 'active') {
-      return false;
-    }
-    if (filterStatus === 'cancellation' && !s.requested_cancellation_date) {
-      return false;
-    }
+  const filteredStylists = (data?.stylists || []).filter(s => {
+    if (filterLocation !== 'all' && s.location_id !== parseInt(filterLocation)) return false;
+    if (filterStatus === 'active' && s.status !== 'active') return false;
+    if (filterStatus === 'cancellation' && !s.requested_cancellation_date) return false;
     return true;
   });
 
-  const activeCount = data.stylists.filter(s => s.status === 'active').length;
-  const pendingCancellations = data.stylists.filter(s => s.requested_cancellation_date).length;
-  const monthlyRevenue = data.stylists
-    .filter(s => s.status === 'active' && s.tier === 'monthly')
-    .reduce((sum) => sum + 1100, 0);
-  const weeklyRevenue = data.stylists
-    .filter(s => s.status === 'active' && s.tier === 'weekly')
-    .reduce((sum) => sum + 300, 0);
+  const activeCount = (data?.stylists || []).filter(s => s.status === 'active').length;
+  const pendingCancellations = (data?.stylists || []).filter(s => s.requested_cancellation_date).length;
+  const monthlyRevenue = (data?.stylists || []).filter(s => s.status === 'active' && s.tier === 'monthly').length * 1100;
+  const weeklyRevenue = (data?.stylists || []).filter(s => s.status === 'active' && s.tier === 'weekly').length * 300 * 4;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-      <h1 style={{ fontFamily: 'Cormorant Garamond', fontSize: '48px', marginBottom: '12px' }}>
-        Admin Dashboard
-      </h1>
-      <p style={{ fontSize: '16px', color: '#666', marginBottom: '40px' }}>
-        Manage stylists and subscriptions
-      </p>
+    <SiteLayout>
+      <div className="min-h-screen bg-background pt-32 pb-24">
+        <div className="mx-auto max-w-[90rem] px-6">
 
-      {/* Stats Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '20px',
-        marginBottom: '40px',
-      }}>
-        <div style={{
-          padding: '24px',
-          backgroundColor: '#f9f9f9',
-          borderRadius: '8px',
-          borderLeft: '4px solid #228B22',
-        }}>
-          <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Active Stylists
-          </p>
-          <p style={{ fontSize: '32px', fontWeight: '700' }}>{activeCount}</p>
-        </div>
+          {/* Header */}
+          <div className="mb-12">
+            <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Suede Salon</span>
+            <h1 className="mt-2 font-display text-5xl font-semibold text-ink">Admin Dashboard</h1>
+            <p className="mt-3 text-base text-espresso/60">Manage stylists and chair rental subscriptions</p>
+          </div>
 
-        <div style={{
-          padding: '24px',
-          backgroundColor: '#f9f9f9',
-          borderRadius: '8px',
-          borderLeft: '4px solid #ffc107',
-        }}>
-          <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Pending Cancellations
-          </p>
-          <p style={{ fontSize: '32px', fontWeight: '700' }}>{pendingCancellations}</p>
-        </div>
-
-        <div style={{
-          padding: '24px',
-          backgroundColor: '#f9f9f9',
-          borderRadius: '8px',
-          borderLeft: '4px solid #1a1a1a',
-        }}>
-          <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Monthly Revenue
-          </p>
-          <p style={{ fontSize: '32px', fontWeight: '700' }}>${monthlyRevenue.toLocaleString()}</p>
-        </div>
-
-        <div style={{
-          padding: '24px',
-          backgroundColor: '#f9f9f9',
-          borderRadius: '8px',
-          borderLeft: '4px solid #1a1a1a',
-        }}>
-          <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Weekly Revenue
-          </p>
-          <p style={{ fontSize: '32px', fontWeight: '700' }}>${(weeklyRevenue * 4).toLocaleString()}</p>
-        </div>
-      </div>
-
-      {/* Location Cards */}
-      <div style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '28px', marginBottom: '20px' }}>
-          Locations
-        </h2>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '16px',
-        }}>
-          {data.locations.map(location => (
-            <div
-              key={location.id}
-              onClick={() => setFilterLocation(filterLocation === location.id.toString() ? 'all' : location.id.toString())}
-              style={{
-                padding: '20px',
-                border: filterLocation === location.id.toString() ? '2px solid #1a1a1a' : '2px solid #e0e0e0',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                backgroundColor: filterLocation === location.id.toString() ? '#f9f9f9' : 'white',
-              }}
-            >
-              <h3 style={{ fontFamily: 'Cormorant Garamond', fontSize: '20px', marginBottom: '8px' }}>
-                {location.name}
-              </h3>
-              <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
-                {location.address}
-              </p>
-              <p style={{ fontSize: '14px', fontWeight: '600' }}>
-                {location.active_stylists} / {location.max_chairs} chairs occupied
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '16px',
-        marginBottom: '24px',
-      }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            Filter by Status
-          </label>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              fontSize: '14px',
-            }}
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active Only</option>
-            <option value="cancellation">Pending Cancellation</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-            Filter by Location
-          </label>
-          <select
-            value={filterLocation}
-            onChange={(e) => setFilterLocation(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              fontSize: '14px',
-            }}
-          >
-            <option value="all">All Locations</option>
-            {data.locations.map(location => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
+          {/* Stats */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-12">
+            {[
+              { label: 'Active Stylists', value: activeCount, accent: 'border-camel' },
+              { label: 'Pending Cancellations', value: pendingCancellations, accent: 'border-destructive' },
+              { label: 'Monthly Chair Revenue', value: `$${monthlyRevenue.toLocaleString()}`, accent: 'border-navy' },
+              { label: 'Est. Weekly Revenue', value: `$${weeklyRevenue.toLocaleString()}`, accent: 'border-hunter' },
+            ].map((stat) => (
+              <div key={stat.label} className={`rounded-md border-l-4 ${stat.accent} bg-card px-6 py-6 border border-border`}>
+                <p className="text-[0.7rem] uppercase tracking-[0.2em] text-espresso/50 mb-2">{stat.label}</p>
+                <p className="font-display text-4xl font-semibold text-ink">{stat.value}</p>
+              </div>
             ))}
-          </select>
+          </div>
+
+          {/* Locations */}
+          <div className="mb-12">
+            <h2 className="font-display text-2xl font-semibold text-navy mb-4">Locations</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(data?.locations || []).map(location => (
+                <div
+                  key={location.id}
+                  onClick={() => setFilterLocation(filterLocation === location.id.toString() ? 'all' : location.id.toString())}
+                  className={`rounded-md border p-6 cursor-pointer transition-all duration-200 ${
+                    filterLocation === location.id.toString()
+                      ? 'border-navy bg-card shadow-sm'
+                      : 'border-border bg-card hover:border-camel/60'
+                  }`}
+                >
+                  <h3 className="font-display text-xl font-semibold text-navy">{location.name}</h3>
+                  <p className="mt-1 text-xs text-espresso/50">{location.address}</p>
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="flex-1 rounded-full bg-border h-1.5">
+                      <div
+                        className="rounded-full bg-camel h-1.5 transition-all"
+                        style={{ width: `${(location.active_stylists / location.max_chairs) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-espresso/60 whitespace-nowrap">
+                      {location.active_stylists} / {location.max_chairs} chairs
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="mb-6 flex flex-wrap gap-4">
+            <div>
+              <label className="block mb-1.5 text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="rounded-sm border border-border bg-card px-4 py-2.5 text-sm text-espresso focus:outline-none focus:border-navy"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active Only</option>
+                <option value="cancellation">Pending Cancellation</option>
+              </select>
+            </div>
+            <div>
+              <label className="block mb-1.5 text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Location</label>
+              <select
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                className="rounded-sm border border-border bg-card px-4 py-2.5 text-sm text-espresso focus:outline-none focus:border-navy"
+              >
+                <option value="all">All Locations</option>
+                {(data?.locations || []).map(l => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="rounded-md border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-card">
+                    {['Stylist', 'Location', 'Plan', 'Status', 'Next Billing', 'Joined'].map(h => (
+                      <th key={h} className="px-5 py-4 text-left text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50 font-medium">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStylists.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-5 py-10 text-center text-espresso/40 text-sm italic">
+                        No stylists found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredStylists.map((stylist, i) => (
+                      <tr key={stylist.id} className={`border-b border-border transition-colors ${i % 2 === 0 ? 'bg-background' : 'bg-card'} hover:bg-card`}>
+                        <td className="px-5 py-4">
+                          <p className="font-medium text-espresso">{stylist.name}</p>
+                          <p className="text-xs text-espresso/50 mt-0.5">{stylist.email}</p>
+                          <p className="text-xs text-espresso/40 mt-0.5">Lic: {stylist.license_number}</p>
+                        </td>
+                        <td className="px-5 py-4 text-espresso/70">{stylist.location_name}</td>
+                        <td className="px-5 py-4">
+                          <span className="inline-block rounded-sm border border-camel/40 px-2 py-1 text-[0.7rem] uppercase tracking-[0.1em] text-camel">
+                            {stylist.tier === 'weekly' ? '$300/wk' : '$1,100/mo'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-block rounded-sm px-2 py-1 text-[0.7rem] uppercase tracking-[0.1em] ${
+                            stylist.requested_cancellation_date
+                              ? 'bg-destructive/10 text-destructive'
+                              : stylist.status === 'active'
+                              ? 'bg-green-50 text-green-700'
+                              : 'bg-border text-espresso/50'
+                          }`}>
+                            {stylist.requested_cancellation_date ? 'Cancelling' : stylist.status}
+                          </span>
+                          {stylist.requested_cancellation_date && (
+                            <p className="text-xs text-espresso/40 mt-1">
+                              {new Date(stylist.requested_cancellation_date).toLocaleDateString()}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-espresso/70 text-xs">
+                          {stylist.current_period_end ? new Date(stylist.current_period_end).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="px-5 py-4 text-espresso/70 text-xs">
+                          {new Date(stylist.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="mt-8 rounded-md border border-camel/30 bg-card px-6 py-5">
+            <p className="text-[0.7rem] uppercase tracking-[0.2em] text-camel mb-2">Admin Notes</p>
+            <ul className="space-y-1.5 text-xs text-espresso/60 leading-relaxed">
+              <li>— Stylists with pending cancellations will be auto-cancelled on the scheduled date.</li>
+              <li>— Maximum 7 stylists per location. Monitor chair capacity carefully.</li>
+              <li>— 30 days written notice is required per rental agreement before cancellation takes effect.</li>
+            </ul>
+          </div>
+
         </div>
       </div>
-
-      {/* Stylists Table */}
-      <div style={{
-        overflowX: 'auto',
-        backgroundColor: '#f9f9f9',
-        borderRadius: '8px',
-      }}>
-        <table style={{
-          width: '100%',
-          borderCollapse: 'collapse',
-          fontSize: '14px',
-        }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #e0e0e0' }}>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600' }}>Name</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600' }}>Location</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600' }}>Email</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600' }}>Plan</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600' }}>Status</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600' }}>Next Billing</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredStylists.length === 0 ? (
-              <tr>
-                <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                  No stylists found
-                </td>
-              </tr>
-            ) : (
-              filteredStylists.map(stylist => (
-                <tr key={stylist.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
-                  <td style={{ padding: '16px' }}>
-                    <p style={{ fontWeight: '600' }}>{stylist.name}</p>
-                    <p style={{ fontSize: '12px', color: '#999' }}>License: {stylist.license_number}</p>
-                  </td>
-                  <td style={{ padding: '16px' }}>
-                    {stylist.location_name}
-                  </td>
-                  <td style={{ padding: '16px' }}>
-                    <a href={`mailto:${stylist.email}`} style={{ color: '#1a1a1a', textDecoration: 'none' }}>
-                      {stylist.email}
-                    </a>
-                  </td>
-                  <td style={{ padding: '16px' }}>
-                    {stylist.tier === 'weekly' ? '$300/week' : '$1,100/month'}
-                  </td>
-                  <td style={{ padding: '16px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      backgroundColor: stylist.status === 'active' ? '#d4edda' : '#f8d7da',
-                      color: stylist.status === 'active' ? '#155724' : '#721c24',
-                    }}>
-                      {stylist.status === 'active' ? '✓ Active' : '✕ ' + stylist.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '16px' }}>
-                    {stylist.current_period_end ? new Date(stylist.current_period_end).toLocaleDateString() : 'N/A'}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Notes */}
-      <div style={{
-        marginTop: '40px',
-        padding: '24px',
-        backgroundColor: '#fffbea',
-        borderRadius: '8px',
-        borderLeft: '4px solid #ffc107',
-      }}>
-        <p style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-          📋 Admin Notes
-        </p>
-        <ul style={{ fontSize: '13px', color: '#666', paddingLeft: '20px', margin: 0 }}>
-          <li style={{ marginBottom: '6px' }}>
-            Stylists with pending cancellations will be auto-cancelled on the scheduled date.
-          </li>
-          <li style={{ marginBottom: '6px' }}>
-            Monitor chair capacity per location. Max 7 stylists per location.
-          </li>
-          <li>
-            Monthly subscriptions renew on the stylist's signup date each month.
-          </li>
-        </ul>
-      </div>
-    </div>
+    </SiteLayout>
   );
 }
