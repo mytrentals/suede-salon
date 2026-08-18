@@ -584,7 +584,7 @@ export function AdminDashboardPage() {
             </div>
           )}
 
-          {/* Notes */}}
+          {/* Notes */}
           <div className="mt-10 rounded-md border border-camel/30 bg-card px-6 py-5">
             <p className="text-[0.7rem] uppercase tracking-[0.2em] text-camel mb-2">Admin Notes</p>
             <ul className="space-y-1.5 text-xs text-espresso/60 leading-relaxed">
