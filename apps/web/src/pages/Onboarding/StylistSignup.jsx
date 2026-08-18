@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import SiteLayout from '@/components/SiteLayout';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
@@ -10,6 +11,7 @@ export function StylistSignupPage() {
   const [locationId, setLocationId] = useState(null);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [confirmation, setConfirmation] = useState(null);
 
   useEffect(() => {
     fetchLocations();
@@ -20,133 +22,235 @@ export function StylistSignupPage() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/locations`);
       const data = await response.json();
       setLocations(data.locations);
-      if (data.locations.length > 0) {
-        setLocationId(data.locations[0].id);
-      }
+      if (data.locations.length > 0) setLocationId(data.locations[0].id);
     } catch (err) {
       console.error('Error fetching locations:', err);
     }
     setLoading(false);
   };
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px' }}>Loading locations...</div>;
-  }
-
   const selectedLocation = locations.find(l => l.id === locationId);
   const isLocationFull = selectedLocation && selectedLocation.available_chairs <= 0;
 
-  return (
-    <div className="signup-container" style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-        <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '48px', marginBottom: '12px' }}>
-          Join Suede Salon
-        </h1>
-        <p style={{ fontSize: '16px', color: '#666' }}>
-          Private chair rental for independent licensed stylists
-        </p>
-      </div>
+  if (confirmation) {
+    return (
+      <SiteLayout>
+        <div className="min-h-screen bg-background pt-32 pb-24">
+          <div className="mx-auto max-w-[40rem] px-6 text-center">
+            <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Welcome to Suede</span>
+            <h1 className="mt-6 font-display text-5xl font-semibold text-ink">
+              You're confirmed.
+            </h1>
+            <p className="mt-6 text-base leading-relaxed text-espresso/80">
+              Your chair rental at <strong>{confirmation.location}</strong> is now active.
+            </p>
 
-      {step === 'location' ? (
-        <div>
-          <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', marginBottom: '24px' }}>
-            Select Your Location
-          </h2>
-          {locations.map((location) => (
-            <div
-              key={location.id}
-              onClick={() => { if (location.available_chairs > 0) setLocationId(location.id); }}
-              style={{
-                padding: '24px',
-                border: locationId === location.id ? '2px solid #1a1a1a' : '2px solid #e0e0e0',
-                borderRadius: '8px',
-                cursor: location.available_chairs > 0 ? 'pointer' : 'not-allowed',
-                backgroundColor: locationId === location.id ? '#f9f9f9' : 'white',
-                marginBottom: '16px',
-                opacity: location.available_chairs > 0 ? 1 : 0.5,
-              }}
-            >
-              <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', marginBottom: '8px' }}>
-                {location.name}
-              </h3>
-              <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>{location.address}</p>
-              <p style={{ fontSize: '16px', fontWeight: '600' }}>
-                {location.available_chairs > 0 ? (
-                  <span style={{ color: '#228B22' }}>✓ {location.available_chairs} chair{location.available_chairs !== 1 ? 's' : ''} available</span>
-                ) : (
-                  <span style={{ color: '#c00' }}>✕ Location full</span>
-                )}
-              </p>
+            <div className="mt-10 rounded-lg border border-camel/40 bg-card px-8 py-10 text-left">
+              <h2 className="font-display text-2xl font-semibold text-navy mb-6">Subscription Details</h2>
+              <div className="space-y-4">
+                <div className="flex justify-between border-b border-border pb-4">
+                  <span className="text-sm text-espresso/60 uppercase tracking-[0.15em]">Location</span>
+                  <span className="text-sm font-medium text-espresso">{confirmation.location}</span>
+                </div>
+                <div className="flex justify-between border-b border-border pb-4">
+                  <span className="text-sm text-espresso/60 uppercase tracking-[0.15em]">Plan</span>
+                  <span className="text-sm font-medium text-espresso">{confirmation.tier === 'weekly' ? '$300 / week' : '$1,100 / month'}</span>
+                </div>
+                <div className="flex justify-between border-b border-border pb-4">
+                  <span className="text-sm text-espresso/60 uppercase tracking-[0.15em]">Status</span>
+                  <span className="text-sm font-medium text-camel">Active</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-espresso/60 uppercase tracking-[0.15em]">Name</span>
+                  <span className="text-sm font-medium text-espresso">{confirmation.name}</span>
+                </div>
+              </div>
             </div>
-          ))}
-          <button
-            onClick={() => setStep('tier')}
-            disabled={isLocationFull}
-            style={{
-              width: '100%', padding: '14px',
-              backgroundColor: isLocationFull ? '#ccc' : '#1a1a1a',
-              color: 'white', border: 'none', borderRadius: '4px',
-              fontSize: '16px', fontWeight: '600',
-              cursor: isLocationFull ? 'default' : 'pointer',
-            }}
-          >
-            Continue
-          </button>
-        </div>
-      ) : step === 'tier' ? (
-        <div>
-          <button onClick={() => setStep('location')} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', marginBottom: '24px', fontSize: '14px' }}>
-            ← Back
-          </button>
-          <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', marginBottom: '24px' }}>
-            Choose Your Tier
-          </h2>
-          {[
-            { id: 'weekly', label: 'Weekly', price: '$300/week', desc: '✓ Best for part-time stylists', amount: 30000 },
-            { id: 'monthly', label: 'Monthly', price: '$1,100/month', desc: '✓ Best for full-time stylists', amount: 110000 },
-          ].map((t) => (
-            <div
-              key={t.id}
-              onClick={() => setTier(t.id)}
-              style={{
-                padding: '32px',
-                border: tier === t.id ? '2px solid #1a1a1a' : '2px solid #e0e0e0',
-                borderRadius: '8px', cursor: 'pointer',
-                backgroundColor: tier === t.id ? '#f9f9f9' : 'white',
-                marginBottom: '20px',
-              }}
-            >
-              <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', marginBottom: '8px' }}>{t.label}</h3>
-              <p style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px' }}>{t.price}</p>
-              <p style={{ fontSize: '14px', color: '#666' }}>{t.desc}</p>
+
+            <div className="mt-8 rounded-lg bg-card border border-border px-8 py-8 text-left">
+              <h3 className="font-display text-xl font-semibold text-navy mb-3">What happens next?</h3>
+              <ul className="space-y-3 text-sm leading-relaxed text-espresso/80">
+                <li className="flex gap-3">
+                  <span className="text-camel font-semibold">1.</span>
+                  <span>Check your email — we've sent a confirmation with your dashboard link.</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-camel font-semibold">2.</span>
+                  <span>Your dashboard lets you manage your subscription, update payment, or request cancellation.</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-camel font-semibold">3.</span>
+                  <span>Your first billing date is today. Subsequent charges will follow your {confirmation.tier === 'weekly' ? 'weekly' : 'monthly'} cycle.</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-camel font-semibold">4.</span>
+                  <span>Remember: per your rental agreement, 30 days written notice is required to cancel.</span>
+                </li>
+              </ul>
             </div>
-          ))}
-          <button
-            onClick={() => setStep('form')}
-            style={{
-              width: '100%', padding: '14px', backgroundColor: '#1a1a1a',
-              color: 'white', border: 'none', borderRadius: '4px',
-              fontSize: '16px', fontWeight: '600', cursor: 'pointer',
-            }}
-          >
-            Continue
-          </button>
+
+            <p className="mt-8 text-sm italic text-espresso/60">
+              Questions? Contact us at <a href="mailto:admin@suedesalonstl.com" className="text-navy underline">admin@suedesalonstl.com</a>
+            </p>
+          </div>
         </div>
-      ) : (
-        <div>
-          <button onClick={() => setStep('tier')} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', marginBottom: '24px', fontSize: '14px' }}>
-            ← Back
-          </button>
-          <Elements stripe={stripePromise} options={{ mode: 'subscription', currency: 'usd', amount: tier === 'weekly' ? 30000 : 110000, paymentMethodCreation: 'manual' }}>
-            <SignupForm tier={tier} locationId={locationId} locationName={selectedLocation?.name} />
-          </Elements>
+      </SiteLayout>
+    );
+  }
+
+  if (loading) {
+    return (
+      <SiteLayout>
+        <div className="min-h-screen bg-background pt-32 flex items-center justify-center">
+          <p className="text-espresso/60 text-sm uppercase tracking-[0.2em]">Loading locations…</p>
         </div>
-      )}
-    </div>
+      </SiteLayout>
+    );
+  }
+
+  return (
+    <SiteLayout>
+      <div className="min-h-screen bg-background pt-32 pb-24">
+        <div className="mx-auto max-w-[40rem] px-6">
+
+          {/* Header */}
+          <div className="mb-12 text-center suede-rise">
+            <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">
+              Stylist Application
+            </span>
+            <h1 className="mt-4 font-display text-5xl font-semibold text-ink">
+              Join Suede Salon
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-espresso/75">
+              Private chair rental for independent licensed stylists
+            </p>
+          </div>
+
+          {/* Step: Location */}
+          {step === 'location' && (
+            <div>
+              <h2 className="font-display text-3xl font-semibold text-navy mb-6">
+                Select Your Location
+              </h2>
+              {locations.length === 0 ? (
+                <p className="text-espresso/60">No locations available.</p>
+              ) : (
+                locations.map((location) => (
+                  <div
+                    key={location.id}
+                    onClick={() => { if (location.available_chairs > 0) setLocationId(location.id); }}
+                    className={`mb-4 rounded-md border p-6 transition-all duration-200 cursor-pointer ${
+                      locationId === location.id
+                        ? 'border-navy bg-card shadow-sm'
+                        : 'border-border bg-card hover:border-camel/60'
+                    } ${location.available_chairs <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <h3 className="font-display text-2xl font-semibold text-navy">{location.name}</h3>
+                    <p className="mt-1 text-sm text-espresso/60">{location.address}</p>
+                    <p className="mt-3 text-sm font-medium">
+                      {location.available_chairs > 0 ? (
+                        <span className="text-green-700">✓ {location.available_chairs} chair{location.available_chairs !== 1 ? 's' : ''} available</span>
+                      ) : (
+                        <span className="text-destructive">✕ Location full</span>
+                      )}
+                    </p>
+                  </div>
+                ))
+              )}
+              <button
+                onClick={() => setStep('tier')}
+                disabled={isLocationFull || !locationId}
+                className="mt-6 w-full rounded-sm bg-ink py-4 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              >
+                Continue
+              </button>
+            </div>
+          )}
+
+          {/* Step: Tier */}
+          {step === 'tier' && (
+            <div>
+              <button onClick={() => setStep('location')} className="mb-6 text-[0.72rem] uppercase tracking-[0.2em] text-espresso/60 hover:text-navy transition-colors">
+                ← Back
+              </button>
+              <h2 className="font-display text-3xl font-semibold text-navy mb-6">
+                Choose Your Plan
+              </h2>
+              {[
+                { id: 'weekly', label: 'Weekly', price: '$300', period: '/week', desc: 'Ideal for part-time or building stylists', amount: 30000 },
+                { id: 'monthly', label: 'Monthly', price: '$1,100', period: '/month', desc: 'Best value for full-time professionals', amount: 110000 },
+              ].map((t) => (
+                <div
+                  key={t.id}
+                  onClick={() => setTier(t.id)}
+                  className={`mb-4 rounded-md border p-8 transition-all duration-200 cursor-pointer ${
+                    tier === t.id
+                      ? 'border-navy bg-card shadow-sm'
+                      : 'border-border bg-card hover:border-camel/60'
+                  }`}
+                >
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="font-display text-2xl font-semibold text-navy">{t.label}</h3>
+                    <p className="font-display text-3xl font-semibold text-ink">
+                      {t.price}<span className="text-base font-normal text-espresso/60">{t.period}</span>
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm text-espresso/60">{t.desc}</p>
+                  {tier === t.id && (
+                    <p className="mt-3 text-[0.7rem] uppercase tracking-[0.2em] text-camel">✓ Selected</p>
+                  )}
+                </div>
+              ))}
+              <button
+                onClick={() => setStep('form')}
+                className="mt-6 w-full rounded-sm bg-ink py-4 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5"
+              >
+                Continue
+              </button>
+            </div>
+          )}
+
+          {/* Step: Form */}
+          {step === 'form' && (
+            <div>
+              <button onClick={() => setStep('tier')} className="mb-6 text-[0.72rem] uppercase tracking-[0.2em] text-espresso/60 hover:text-navy transition-colors">
+                ← Back
+              </button>
+              <Elements
+                stripe={stripePromise}
+                options={{
+                  mode: 'subscription',
+                  currency: 'usd',
+                  amount: tier === 'weekly' ? 30000 : 110000,
+                  paymentMethodCreation: 'manual',
+                  appearance: {
+                    theme: 'stripe',
+                    variables: {
+                      colorPrimary: '#1c2b47',
+                      colorBackground: '#f5efe6',
+                      colorText: '#3d2b1f',
+                      fontFamily: 'DM Sans, sans-serif',
+                      borderRadius: '4px',
+                    },
+                  },
+                }}
+              >
+                <SignupForm
+                  tier={tier}
+                  locationId={locationId}
+                  locationName={selectedLocation?.name}
+                  onSuccess={setConfirmation}
+                />
+              </Elements>
+            </div>
+          )}
+        </div>
+      </div>
+    </SiteLayout>
   );
 }
 
-function SignupForm({ tier, locationId, locationName }) {
+function SignupForm({ tier, locationId, locationName, onSuccess }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -171,7 +275,6 @@ function SignupForm({ tier, locationId, locationName }) {
     }
 
     try {
-      // Step 1: Submit elements first
       const { error: submitError } = await elements.submit();
       if (submitError) {
         setError(submitError.message);
@@ -179,14 +282,10 @@ function SignupForm({ tier, locationId, locationName }) {
         return;
       }
 
-      // Step 2: Create payment method
       const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
         elements,
         params: {
-          billing_details: {
-            name: formData.name,
-            email: formData.email,
-          },
+          billing_details: { name: formData.name, email: formData.email },
         },
       });
 
@@ -196,7 +295,6 @@ function SignupForm({ tier, locationId, locationName }) {
         return;
       }
 
-      // Step 3: Submit to backend
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -208,15 +306,15 @@ function SignupForm({ tier, locationId, locationName }) {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || 'Signup failed');
+        setError(data.error || 'Signup failed. Please try again.');
         setIsLoading(false);
         return;
       }
 
-      alert('Signup complete! Check your email for next steps.');
-      setFormData({ name: '', email: '', phone: '', licenseNumber: '', startDate: '' });
+      onSuccess({ ...data, tier, name: formData.name });
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error(err);
@@ -225,56 +323,64 @@ function SignupForm({ tier, locationId, locationName }) {
     setIsLoading(false);
   };
 
-  const inputStyle = {
-    width: '100%', padding: '10px',
-    border: '1px solid #ccc', borderRadius: '4px',
-    fontSize: '14px', boxSizing: 'border-box',
-    marginBottom: '16px',
-  };
+  const inputClass = "w-full rounded-sm border border-border bg-card px-4 py-3 text-sm text-espresso placeholder-espresso/40 focus:outline-none focus:border-navy transition-colors duration-200";
+  const labelClass = "block mb-2 text-[0.72rem] uppercase tracking-[0.15em] text-espresso/60";
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: '400px', margin: '0 auto' }}>
-      <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', marginBottom: '24px' }}>
+    <form onSubmit={handleSubmit}>
+      <h2 className="font-display text-3xl font-semibold text-navy mb-2">
         Complete Your Profile
       </h2>
 
-      <div style={{ padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '4px', marginBottom: '24px' }}>
-        <p style={{ fontSize: '12px', color: '#666', marginBottom: '4px', textTransform: 'uppercase' }}>Location</p>
-        <p style={{ fontSize: '16px', fontWeight: '600' }}>{locationName}</p>
-        <p style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>{tier === 'weekly' ? '$300/week' : '$1,100/month'}</p>
+      {/* Summary */}
+      <div className="mb-8 rounded-md border border-camel/40 bg-card px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-[0.7rem] uppercase tracking-[0.2em] text-espresso/50">Location</p>
+            <p className="text-sm font-medium text-espresso mt-0.5">{locationName}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[0.7rem] uppercase tracking-[0.2em] text-espresso/50">Plan</p>
+            <p className="text-sm font-medium text-espresso mt-0.5">{tier === 'weekly' ? '$300/week' : '$1,100/month'}</p>
+          </div>
+        </div>
       </div>
 
-      {[
-        { label: 'Full Name', name: 'name', type: 'text' },
-        { label: 'Email', name: 'email', type: 'email' },
-        { label: 'Phone', name: 'phone', type: 'tel' },
-        { label: 'License Number', name: 'licenseNumber', type: 'text' },
-        { label: 'Start Date', name: 'startDate', type: 'date' },
-      ].map((field) => (
-        <div key={field.name}>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>
-            {field.label}
-          </label>
-          <input
-            type={field.type}
-            name={field.name}
-            value={formData[field.name]}
-            onChange={handleChange}
-            required
-            style={inputStyle}
-          />
+      <div className="space-y-5">
+        <div>
+          <label className={labelClass}>Full Name</label>
+          <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Jane Smith" className={inputClass} />
         </div>
-      ))}
+        <div>
+          <label className={labelClass}>Email Address</label>
+          <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="jane@example.com" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Phone Number</label>
+          <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required placeholder="314-555-0100" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Missouri License Number</label>
+          <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} required placeholder="MO-XXXXXXX" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Desired Start Date</label>
+          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required className={inputClass} />
+        </div>
 
-      <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
-          Payment Method
-        </label>
-        <PaymentElement />
+        <div>
+          <label className={labelClass}>Payment Method</label>
+          <p className="mb-3 text-xs text-espresso/50 leading-relaxed">
+            ACH bank transfer recommended — lower fees. Card also accepted.
+          </p>
+          <div className="rounded-sm border border-border bg-card p-4">
+            <PaymentElement />
+          </div>
+        </div>
       </div>
 
       {error && (
-        <div style={{ padding: '12px', backgroundColor: '#ffe6e6', color: '#c00', borderRadius: '4px', marginBottom: '16px', fontSize: '14px' }}>
+        <div className="mt-6 rounded-sm border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -282,19 +388,13 @@ function SignupForm({ tier, locationId, locationName }) {
       <button
         type="submit"
         disabled={isLoading}
-        style={{
-          width: '100%', padding: '14px',
-          backgroundColor: isLoading ? '#ccc' : '#1a1a1a',
-          color: 'white', border: 'none', borderRadius: '4px',
-          fontSize: '16px', fontWeight: '600',
-          cursor: isLoading ? 'default' : 'pointer',
-        }}
+        className="mt-8 w-full rounded-sm bg-ink py-4 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
       >
-        {isLoading ? 'Processing...' : 'Complete Signup'}
+        {isLoading ? 'Processing…' : 'Complete Signup'}
       </button>
 
-      <p style={{ fontSize: '12px', color: '#999', marginTop: '16px', textAlign: 'center' }}>
-        By signing up, you agree to our chair rental agreement terms.
+      <p className="mt-4 text-center text-xs italic text-espresso/50">
+        By signing up, you agree to our chair rental agreement. 30 days written notice required to cancel.
       </p>
     </form>
   );
