@@ -66,9 +66,16 @@ export function StylistSignupPage() {
             <h1 className="mt-6 font-display text-5xl font-semibold text-ink">
               You're confirmed.
             </h1>
-            <p className="mt-6 text-base leading-relaxed text-espresso/80">
-              Your chair rental at <strong>{confirmation.location}</strong> is now active.
-            </p>
+            {confirmation.paymentFailed ? (
+              <div className="mt-6 rounded-md border border-destructive/40 bg-destructive/5 px-6 py-4">
+                <p className="text-sm font-semibold text-destructive mb-1">⚠️ Payment Failed</p>
+                <p className="text-sm text-espresso/70">Your account was created but payment didn't go through. Check your email for a dashboard link where you can update your payment method.</p>
+              </div>
+            ) : (
+              <p className="mt-6 text-base leading-relaxed text-espresso/80">
+                Your chair rental at <strong>{confirmation.location}</strong> is now active.
+              </p>
+            )}
 
             <div className="mt-10 rounded-lg border border-camel/40 bg-card px-8 py-10 text-left">
               <h2 className="font-display text-2xl font-semibold text-navy mb-6">Subscription Details</h2>
@@ -376,7 +383,7 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
       if (inviteToken) {
         await fetch(`${import.meta.env.VITE_API_URL}/api/invite/${inviteToken}/use`, { method: 'POST' });
       }
-      onSuccess({ ...data, tier, name: formData.name });
+      onSuccess({ ...data, tier, name: formData.name, paymentFailed: data.requiresPaymentUpdate });
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error(err);

@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 import { useParams } from 'react-router-dom';
 import SiteLayout from '@/components/SiteLayout';
 
@@ -12,6 +16,7 @@ export function StylistDashboardPage() {
   const [cancelConfirmed, setCancelConfirmed] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
+  const [showPaymentRetry, setShowPaymentRetry] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
@@ -117,6 +122,22 @@ export function StylistDashboardPage() {
               Manage your Suede Salon chair rental subscription
             </p>
           </div>
+
+          {/* Payment Pending Banner */}
+          {subscription?.status === 'payment_pending' && (
+            <div className="mb-8 rounded-md border border-destructive/40 bg-destructive/5 px-6 py-5">
+              <p className="text-sm font-semibold text-destructive mb-1">⚠️ Payment Required</p>
+              <p className="text-sm text-espresso/70 mb-4">
+                Your subscription was created but your payment didn't go through. Please update your payment method to activate your chair rental.
+              </p>
+              <button
+                onClick={() => setShowPaymentRetry(true)}
+                className="rounded-sm bg-destructive px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.22em] text-white transition-opacity hover:opacity-90"
+              >
+                Update Payment & Retry
+              </button>
+            </div>
+          )}
 
           {/* Cancellation success */}
           {cancelSuccess && (
@@ -270,6 +291,79 @@ export function StylistDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Payment Retry Modal */}
+      {showPaymentRetry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
+            <h2 className="font-display text-2xl font-semibold text-navy mb-3">Update Payment Method</h2>
+            <p className="text-sm text-espresso/70 mb-6">
+              Enter a new payment method to activate your subscription.
+            </p>
+            <Elements stripe={stripePromise} options={{ mode: 'subscription', currency: 'usd', amount: subscription?.tier === 'weekly' ? 30000 : 110000, paymentMethodCreation: 'manual' }}>
+              <RetryPaymentForm token={token} onSuccess={() => { setShowPaymentRetry(false); fetchDashboard(); }} onCancel={() => setShowPaymentRetry(false)} />
+            </Elements>
+          </div>
+        </div>
+      )}
+
     </SiteLayout>
+  );
+}
+
+function RetryPaymentForm({ token, onSuccess, onCancel }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) { setError(submitError.message); setLoading(false); return; }
+
+      const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+        elements,
+        params: { billing_details: {} },
+      });
+      if (pmError) { setError(pmError.message); setLoading(false); return; }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stylist/retry-payment/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethod: paymentMethod.id }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) { setError(data.error || 'Payment failed'); setLoading(false); return; }
+
+      onSuccess();
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="rounded-sm border border-border bg-card p-4 mb-4">
+        <PaymentElement />
+      </div>
+      {error && (
+        <div className="mb-4 rounded-sm border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>
+      )}
+      <div className="flex gap-3">
+        <button type="button" onClick={onCancel} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">
+          Cancel
+        </button>
+        <button type="submit" disabled={loading} className="flex-1 rounded-sm bg-ink py-3 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40">
+          {loading ? 'Processing...' : 'Pay Now'}
+        </button>
+      </div>
+    </form>
   );
 }
