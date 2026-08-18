@@ -6,6 +6,7 @@ const navItems = [
     { to: '/', label: 'Home' },
     { to: '/about', label: 'About Us' },
     { to: '/contact', label: 'Contact Us' },
+    { to: '/stylist/login', label: 'Stylist Login' },
 ];
 
 function Logo({ className = '' }) {
