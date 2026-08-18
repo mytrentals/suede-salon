@@ -27,8 +27,17 @@ export function AdminDashboardPage() {
   const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
-    if (token) fetchData();
-    else setLoading(false);
+    if (token) {
+      sessionStorage.setItem('adminToken', token);
+      fetchData();
+    } else {
+      const saved = sessionStorage.getItem('adminToken');
+      if (saved) {
+        window.location.href = `/admin/dashboard/${saved}`;
+      } else {
+        setLoading(false);
+      }
+    }
   }, [token]);
 
   const fetchData = async () => {
