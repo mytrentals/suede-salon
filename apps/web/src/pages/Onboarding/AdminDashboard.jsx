@@ -20,6 +20,10 @@ export function AdminDashboardPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [invites, setInvites] = useState([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: '', locationId: '' });
+  const [inviteLoading, setInviteLoading] = useState(false);
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
   const [confirmDeleteLocation, setConfirmDeleteLocation] = useState(null);
@@ -44,7 +48,16 @@ export function AdminDashboardPage() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/subscriptions/${token}`);
       if (!response.ok) { setError('Invalid or expired admin link'); setLoading(false); return; }
-      setData(await response.json());
+      const result = await response.json();
+      setData(result);
+      // Also fetch invites
+      const inviteRes = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invites/${token}`, {
+        headers: { 'x-admin-token': token }
+      });
+      if (inviteRes.ok) {
+        const inviteData = await inviteRes.json();
+        setInvites(inviteData.invites || []);
+      }
     } catch (err) { setError('Failed to load admin data'); }
     setLoading(false);
   };
@@ -176,9 +189,17 @@ export function AdminDashboardPage() {
     <SiteLayout>
       <div className="min-h-screen bg-background pt-32 pb-24">
         <div className="mx-auto max-w-[90rem] px-6">
-          <div className="mb-10">
-            <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Suede Salon</span>
-            <h1 className="mt-2 font-display text-5xl font-semibold text-ink">Admin Dashboard</h1>
+          <div className="mb-10 flex items-start justify-between">
+            <div>
+              <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Suede Salon</span>
+              <h1 className="mt-2 font-display text-5xl font-semibold text-ink">Admin Dashboard</h1>
+            </div>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="mt-4 rounded-sm bg-ink px-6 py-3 text-[0.72rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform hover:-translate-y-0.5"
+            >
+              + Invite Stylist
+            </button>
           </div>
 
           {successMessage && (
@@ -208,6 +229,7 @@ export function AdminDashboardPage() {
               { id: 'locations', label: 'Locations' },
               { id: 'revenue', label: 'Revenue' },
               { id: 'renewals', label: 'Upcoming Renewals' },
+              { id: 'invites', label: `Invites${invites.length > 0 ? ` (${invites.filter(i => !i.used).length})` : ''}` },
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 text-[0.72rem] uppercase tracking-[0.2em] transition-colors border-b-2 -mb-px ${
@@ -486,7 +508,83 @@ export function AdminDashboardPage() {
             </div>
           )}
 
-          {/* Notes */}
+          {/* Invites Tab */}
+          {activeTab === 'invites' && (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <p className="text-sm text-espresso/60">Pending and past stylist invitations.</p>
+                <button onClick={() => setShowInviteModal(true)}
+                  className="rounded-sm bg-ink px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform hover:-translate-y-0.5">
+                  + Invite Stylist
+                </button>
+              </div>
+              {invites.length === 0 ? (
+                <div className="rounded-md border border-border bg-card p-10 text-center">
+                  <p className="text-espresso/40 italic text-sm">No invites sent yet.</p>
+                </div>
+              ) : (
+                <div className="rounded-md border border-border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-card">
+                        {['Email', 'Location', 'Sent', 'Expires', 'Status', 'Actions'].map(h => (
+                          <th key={h} className="px-5 py-4 text-left text-[0.65rem] uppercase tracking-[0.15em] text-espresso/50 font-medium whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invites.map((invite, i) => {
+                        const isExpired = new Date(invite.expires_at) < new Date();
+                        const status = invite.used ? 'Signed Up' : isExpired ? 'Expired' : 'Pending';
+                        return (
+                          <tr key={invite.id} className={`border-b border-border ${i % 2 === 0 ? 'bg-background' : 'bg-card'}`}>
+                            <td className="px-5 py-4 font-medium text-espresso">{invite.email}</td>
+                            <td className="px-5 py-4 text-sm text-espresso/70">{invite.location_name}</td>
+                            <td className="px-5 py-4 text-xs text-espresso/70">{new Date(invite.created_at).toLocaleDateString()}</td>
+                            <td className="px-5 py-4 text-xs text-espresso/70">{new Date(invite.expires_at).toLocaleDateString()}</td>
+                            <td className="px-5 py-4">
+                              <span className={`inline-block rounded-sm px-2 py-1 text-[0.65rem] uppercase tracking-[0.1em] ${
+                                invite.used ? 'bg-green-50 text-green-700' :
+                                isExpired ? 'bg-destructive/10 text-destructive' :
+                                'bg-camel/10 text-camel'
+                              }`}>{status}</span>
+                            </td>
+                            <td className="px-5 py-4">
+                              {!invite.used && (
+                                <div className="flex gap-2">
+                                  <button onClick={async () => {
+                                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}/resend`, {
+                                      method: 'POST', headers: { 'x-admin-token': token }
+                                    });
+                                    if (response.ok) { showSuccess('Invite resent!'); await fetchData(); }
+                                    else alert('Failed to resend invite');
+                                  }} className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-navy hover:text-navy transition-colors whitespace-nowrap">
+                                    Resend
+                                  </button>
+                                  <button onClick={async () => {
+                                    if (!confirm('Revoke this invite?')) return;
+                                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}`, {
+                                      method: 'DELETE', headers: { 'x-admin-token': token }
+                                    });
+                                    if (response.ok) { showSuccess('Invite revoked.'); await fetchData(); }
+                                    else alert('Failed to revoke invite');
+                                  }} className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-destructive hover:text-destructive transition-colors whitespace-nowrap">
+                                    Revoke
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Notes */}}
           <div className="mt-10 rounded-md border border-camel/30 bg-card px-6 py-5">
             <p className="text-[0.7rem] uppercase tracking-[0.2em] text-camel mb-2">Admin Notes</p>
             <ul className="space-y-1.5 text-xs text-espresso/60 leading-relaxed">
@@ -702,6 +800,71 @@ export function AdminDashboardPage() {
                 {actionLoading ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Invite Stylist Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
+            <h2 className="font-display text-2xl font-semibold text-navy mb-2">Invite Stylist</h2>
+            <p className="text-sm text-espresso/60 mb-6">
+              Send a 24-hour signup link to a prospective stylist. They will be pre-assigned to the selected location.
+            </p>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setInviteLoading(true);
+              try {
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                  body: JSON.stringify({ email: inviteForm.email, locationId: parseInt(inviteForm.locationId) }),
+                });
+                if (response.ok) {
+                  setShowInviteModal(false);
+                  setInviteForm({ email: '', locationId: '' });
+                  showSuccess(`Invite sent to ${inviteForm.email}`);
+                  await fetchData();
+                } else {
+                  const d = await response.json();
+                  alert(d.error || 'Failed to send invite');
+                }
+              } catch (err) { alert('Error sending invite'); }
+              setInviteLoading(false);
+            }} className="space-y-4">
+              <div>
+                <label className={labelClass}>Stylist Email *</label>
+                <input type="email" value={inviteForm.email} onChange={(e) => setInviteForm({...inviteForm, email: e.target.value})}
+                  required placeholder="stylist@email.com" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Location *</label>
+                <select value={inviteForm.locationId} onChange={(e) => setInviteForm({...inviteForm, locationId: e.target.value})}
+                  required className={inputClass}>
+                  <option value="">Select a location</option>
+                  {(data?.locations || []).map(l => (
+                    <option key={l.id} value={l.id}>{l.name} ({l.max_chairs - l.active_stylists} chairs available)</option>
+                  ))}
+                </select>
+              </div>
+              <div className="rounded-sm border border-camel/30 bg-card px-4 py-3">
+                <p className="text-xs text-espresso/60 leading-relaxed">
+                  ⏱ This link will expire in <strong>24 hours</strong>. The stylist will be asked to complete their profile and payment details.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowInviteModal(false); setInviteForm({ email: '', locationId: '' }); }}
+                  className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={inviteLoading}
+                  className="flex-1 rounded-sm bg-ink py-3 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40">
+                  {inviteLoading ? 'Sending...' : 'Send Invite'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

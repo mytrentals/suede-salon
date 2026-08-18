@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import SiteLayout from '@/components/SiteLayout';
@@ -11,22 +12,46 @@ export function StylistSignupPage() {
   const [locationId, setLocationId] = useState(null);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [inviteToken, setInviteToken] = useState(null);
+  const [inviteError, setInviteError] = useState(null);
+  const [inviteValidating, setInviteValidating] = useState(true);
   const [confirmation, setConfirmation] = useState(null);
 
   useEffect(() => {
-    fetchLocations();
+    const params = new URLSearchParams(window.location.search);
+    const invite = params.get('invite');
+    if (invite) {
+      setInviteToken(invite);
+      validateInvite(invite);
+    } else {
+      setInviteError('This signup page is by invitation only. Please contact Suede Salon to request an invitation.');
+      setInviteValidating(false);
+    }
   }, []);
 
-  const fetchLocations = async () => {
+  const validateInvite = async (invite) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/locations`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invite/${invite}`);
+      if (!response.ok) {
+        const d = await response.json();
+        setInviteError(d.error || 'This invitation link is invalid or has expired.');
+        setInviteValidating(false);
+        return;
+      }
       const data = await response.json();
-      setLocations(data.locations);
-      if (data.locations.length > 0) setLocationId(data.locations[0].id);
+      // Pre-fill location from invite
+      setLocations([{ ...data.invite, available_chairs: 7, max_chairs: 7 }]);
+      setLocationId(data.invite.location_id);
+      setInviteValidating(false);
+      setLoading(false);
     } catch (err) {
-      console.error('Error fetching locations:', err);
+      setInviteError('Failed to validate invitation. Please try again.');
+      setInviteValidating(false);
     }
-    setLoading(false);
+  };
+
+  const fetchLocations = async () => {
+    // Locations are loaded via invite validation
   };
 
   const selectedLocation = locations.find(l => l.id === locationId);
@@ -98,11 +123,41 @@ export function StylistSignupPage() {
     );
   }
 
+  if (inviteValidating) {
+    return (
+      <SiteLayout>
+        <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>
+        <div className="min-h-screen bg-background pt-32 flex items-center justify-center">
+          <p className="text-espresso/60 text-sm uppercase tracking-[0.2em]">Validating invitation…</p>
+        </div>
+      </SiteLayout>
+    );
+  }
+
+  if (inviteError) {
+    return (
+      <SiteLayout>
+        <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>
+        <div className="min-h-screen bg-background pt-32 pb-24">
+          <div className="mx-auto max-w-[36rem] px-6 text-center">
+            <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Invitation Required</span>
+            <h1 className="mt-4 font-display text-4xl font-semibold text-ink">Private Access Only</h1>
+            <p className="mt-4 text-base text-espresso/70">{inviteError}</p>
+            <p className="mt-6 text-sm italic text-espresso/50">
+              Contact us at <a href="mailto:info@suedesalonstl.com" className="text-navy underline">info@suedesalonstl.com</a>
+            </p>
+          </div>
+        </div>
+      </SiteLayout>
+    );
+  }
+
   if (loading) {
     return (
       <SiteLayout>
+        <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>
         <div className="min-h-screen bg-background pt-32 flex items-center justify-center">
-          <p className="text-espresso/60 text-sm uppercase tracking-[0.2em]">Loading locations…</p>
+          <p className="text-espresso/60 text-sm uppercase tracking-[0.2em]">Loading…</p>
         </div>
       </SiteLayout>
     );
@@ -110,6 +165,7 @@ export function StylistSignupPage() {
 
   return (
     <SiteLayout>
+      <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>
       <div className="min-h-screen bg-background pt-32 pb-24">
         <div className="mx-auto max-w-[40rem] px-6">
 
@@ -240,6 +296,8 @@ export function StylistSignupPage() {
                   locationId={locationId}
                   locationName={selectedLocation?.name}
                   onSuccess={setConfirmation}
+                  inviteToken={inviteToken}
+                  prefilledEmail={locations[0]?.email || ''}
                 />
               </Elements>
             </div>
@@ -250,13 +308,13 @@ export function StylistSignupPage() {
   );
 }
 
-function SignupForm({ tier, locationId, locationName, onSuccess }) {
+function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, prefilledEmail }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', licenseNumber: '', startDate: '',
+    name: '', email: prefilledEmail || '', phone: '', licenseNumber: '', startDate: '',
   });
 
   const handleChange = (e) => {
@@ -314,6 +372,10 @@ function SignupForm({ tier, locationId, locationName, onSuccess }) {
         return;
       }
 
+      // Mark invite as used
+      if (inviteToken) {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/invite/${inviteToken}/use`, { method: 'POST' });
+      }
       onSuccess({ ...data, tier, name: formData.name });
     } catch (err) {
       setError('An error occurred. Please try again.');
