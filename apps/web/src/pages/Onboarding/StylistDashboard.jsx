@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import SiteLayout from '@/components/SiteLayout';
 
 export function StylistDashboardPage() {
   const { token } = useParams();
-  const [stylist, setStylest] = useState(null);
+  const [stylist, setStylist] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelConfirmed, setCancelConfirmed] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
@@ -19,15 +21,15 @@ export function StylistDashboardPage() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stylist/dashboard/${token}`);
       if (!response.ok) {
-        setError('Invalid or expired link. Please request a new one.');
+        setError('This link is invalid or has expired. Please request a new one from the salon.');
         setLoading(false);
         return;
       }
       const data = await response.json();
-      setStylest(data.stylist);
+      setStylist(data.stylist);
       setSubscription(data.subscription);
     } catch (err) {
-      setError('Failed to load dashboard');
+      setError('Failed to load your dashboard. Please try again.');
       console.error(err);
     }
     setLoading(false);
@@ -37,305 +39,237 @@ export function StylistDashboardPage() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stylist/payment-portal/${token}`);
       const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
+      if (data.url) window.location.href = data.url;
     } catch (err) {
-      alert('Failed to open payment portal');
+      alert('Failed to open payment portal. Please try again.');
     }
   };
 
   const handleRequestCancellation = async () => {
-    if (!cancelConfirmed) {
-      alert('Please confirm that you have given 30 days notice');
-      return;
-    }
-
+    if (!cancelConfirmed) return;
     setCancelLoading(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stylist/request-cancellation/${token}`, {
         method: 'POST',
       });
       if (response.ok) {
-        alert('Cancellation request submitted. Admin has been notified.');
+        setCancelSuccess(true);
         setShowCancelModal(false);
         fetchDashboard();
       } else {
-        alert('Failed to submit cancellation request');
+        alert('Failed to submit cancellation. Please contact the salon directly.');
       }
     } catch (err) {
-      alert('Error submitting cancellation request');
-      console.error(err);
+      alert('Error submitting cancellation. Please try again.');
     }
     setCancelLoading(false);
   };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '40px' }}>Loading dashboard...</div>;
+    return (
+      <SiteLayout>
+        <div className="min-h-screen bg-background pt-32 flex items-center justify-center">
+          <p className="text-espresso/60 text-sm uppercase tracking-[0.2em]">Loading your dashboard…</p>
+        </div>
+      </SiteLayout>
+    );
   }
 
   if (error) {
     return (
-      <div style={{ maxWidth: '600px', margin: '40px auto', padding: '20px', textAlign: 'center' }}>
-        <h2 style={{ color: '#c00', marginBottom: '16px' }}>{error}</h2>
-        <p style={{ color: '#666' }}>Contact the salon at admin@suede-salon.com for assistance.</p>
-      </div>
+      <SiteLayout>
+        <div className="min-h-screen bg-background pt-32 pb-24">
+          <div className="mx-auto max-w-[36rem] px-6 text-center">
+            <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Dashboard Access</span>
+            <h1 className="mt-4 font-display text-4xl font-semibold text-ink">Link Expired</h1>
+            <p className="mt-4 text-base text-espresso/70">{error}</p>
+            <p className="mt-6 text-sm italic text-espresso/50">
+              Contact us at{' '}
+              <a href="mailto:admin@suedesalonstl.com" className="text-navy underline">
+                admin@suedesalonstl.com
+              </a>{' '}
+              to receive a new dashboard link.
+            </p>
+          </div>
+        </div>
+      </SiteLayout>
     );
   }
 
-  if (!stylist || !subscription) {
-    return <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>;
-  }
-
-  const nextBillingDate = subscription.currentPeriodEnd 
-    ? new Date(subscription.currentPeriodEnd).toLocaleDateString() 
-    : 'N/A';
-
-  const isSubscriptionActive = subscription.status === 'active';
-  const hasCancellationRequest = !!subscription.requestedCancellationDate;
+  const isActive = subscription?.status === 'active';
+  const hasCancellationRequest = !!subscription?.requestedCancellationDate;
+  const nextBilling = subscription?.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '—';
 
   return (
-    <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
-      <h1 style={{ fontFamily: 'Cormorant Garamond', fontSize: '48px', marginBottom: '12px' }}>
-        Welcome, {stylist.name}
-      </h1>
-      <p style={{ fontSize: '16px', color: '#666', marginBottom: '40px' }}>
-        Manage your Suede Salon chair rental subscription
-      </p>
+    <SiteLayout>
+      <div className="min-h-screen bg-background pt-32 pb-24">
+        <div className="mx-auto max-w-[56rem] px-6">
 
-      {/* Profile Card */}
-      <div style={{
-        padding: '32px',
-        backgroundColor: '#f9f9f9',
-        borderRadius: '8px',
-        marginBottom: '32px',
-      }}>
-        <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '28px', marginBottom: '24px' }}>
-          Your Profile
-        </h2>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Name
+          {/* Header */}
+          <div className="mb-12 suede-rise">
+            <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Stylist Portal</span>
+            <h1 className="mt-2 font-display text-5xl font-semibold text-ink">
+              Welcome, {stylist?.name?.split(' ')[0]}.
+            </h1>
+            <p className="mt-3 text-base text-espresso/60">
+              Manage your Suede Salon chair rental subscription
             </p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>{stylist.name}</p>
           </div>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Email
+
+          {/* Cancellation success */}
+          {cancelSuccess && (
+            <div className="mb-8 rounded-md border border-camel/40 bg-card px-6 py-4">
+              <p className="text-sm text-espresso">
+                ✓ Your cancellation request has been submitted. The salon has been notified and your subscription will remain active for 30 days.
+              </p>
+            </div>
+          )}
+
+          <div className="grid gap-6 lg:grid-cols-2">
+
+            {/* Subscription Card */}
+            <div className="rounded-md border border-border bg-card p-8">
+              <h2 className="font-display text-2xl font-semibold text-navy mb-6">Your Subscription</h2>
+              <div className="space-y-4">
+                <div className="flex justify-between border-b border-border pb-4">
+                  <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Status</span>
+                  <span className={`text-sm font-medium ${
+                    hasCancellationRequest ? 'text-destructive' : isActive ? 'text-green-700' : 'text-espresso/50'
+                  }`}>
+                    {hasCancellationRequest ? 'Cancellation Pending' : isActive ? '✓ Active' : subscription?.status}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-border pb-4">
+                  <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Plan</span>
+                  <span className="text-sm font-medium text-espresso">
+                    {subscription?.tier === 'weekly' ? '$300 / week' : '$1,100 / month'}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-border pb-4">
+                  <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Next Billing</span>
+                  <span className="text-sm font-medium text-espresso">{nextBilling}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Payment Method</span>
+                  <span className="text-sm font-medium text-espresso">
+                    {subscription?.paymentMethodLast4 ? `•••• ${subscription.paymentMethodLast4}` : 'On file'}
+                  </span>
+                </div>
+              </div>
+
+              {hasCancellationRequest && (
+                <div className="mt-6 rounded-sm border border-camel/30 bg-background px-4 py-3">
+                  <p className="text-xs text-espresso/70">
+                    Your subscription will remain active until{' '}
+                    <strong>{new Date(subscription.requestedCancellationDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-8 space-y-3">
+                <button
+                  onClick={handlePortalRedirect}
+                  className="w-full rounded-sm bg-ink py-3.5 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform duration-300 hover:-translate-y-0.5"
+                >
+                  Manage Payment Method
+                </button>
+                {isActive && !hasCancellationRequest && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="w-full rounded-sm border border-espresso/30 py-3.5 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 transition-colors hover:border-destructive hover:text-destructive"
+                  >
+                    Request Cancellation
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Profile Card */}
+            <div className="rounded-md border border-border bg-card p-8">
+              <h2 className="font-display text-2xl font-semibold text-navy mb-6">Your Profile</h2>
+              <div className="space-y-4">
+                {[
+                  { label: 'Full Name', value: stylist?.name },
+                  { label: 'Email', value: stylist?.email },
+                  { label: 'Phone', value: stylist?.phone },
+                  { label: 'License Number', value: stylist?.licenseNumber },
+                ].map(({ label, value }) => (
+                  <div key={label} className="border-b border-border pb-4 last:border-0 last:pb-0">
+                    <p className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50 mb-1">{label}</p>
+                    <p className="text-sm text-espresso">{value || '—'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Rental Agreement Reminder */}
+          <div className="mt-8 rounded-md border border-camel/30 bg-card px-6 py-5">
+            <p className="text-[0.7rem] uppercase tracking-[0.2em] text-camel mb-2">Rental Agreement</p>
+            <p className="text-xs text-espresso/60 leading-relaxed">
+              Per your chair rental agreement, <strong>30 days written notice</strong> is required before cancellation. 
+              Cancellation requests submitted here notify the salon and begin your 30-day notice period.
+              No refunds or prorations are issued.
             </p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>{stylist.email}</p>
           </div>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Phone
+
+          {/* Contact */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-espresso/50">
+              Questions? Contact us at{' '}
+              <a href="mailto:admin@suedesalonstl.com" className="text-navy hover:text-camel transition-colors">
+                admin@suedesalonstl.com
+              </a>
             </p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>{stylist.phone}</p>
           </div>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '4px' }}>
-              License Number
-            </p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>{stylist.licenseNumber}</p>
-          </div>
+
         </div>
-      </div>
-
-      {/* Subscription Card */}
-      <div style={{
-        padding: '32px',
-        backgroundColor: '#f9f9f9',
-        borderRadius: '8px',
-        marginBottom: '32px',
-        borderLeft: '4px solid ' + (isSubscriptionActive ? '#228B22' : '#c00'),
-      }}>
-        <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '28px', marginBottom: '24px' }}>
-          Subscription
-        </h2>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Status
-            </p>
-            <p style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              color: isSubscriptionActive ? '#228B22' : '#c00',
-            }}>
-              {isSubscriptionActive ? '✓ Active' : '✕ Inactive'}
-            </p>
-          </div>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Plan
-            </p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>
-              {subscription.tier === 'weekly' ? '$300/week' : '$1,100/month'}
-            </p>
-          </div>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Next Billing
-            </p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>{nextBillingDate}</p>
-          </div>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Payment Method
-            </p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>
-              {subscription.paymentMethodLast4 ? `•••• ${subscription.paymentMethodLast4}` : 'On file'}
-            </p>
-          </div>
-        </div>
-
-        {hasCancellationRequest && (
-          <div style={{
-            padding: '16px',
-            backgroundColor: '#fff3cd',
-            borderRadius: '4px',
-            marginBottom: '24px',
-            border: '1px solid #ffc107',
-          }}>
-            <p style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
-              ⚠️ Cancellation Pending
-            </p>
-            <p style={{ fontSize: '13px', color: '#664d03' }}>
-              Your subscription will be cancelled on {new Date(subscription.requestedCancellationDate).toLocaleDateString()}.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '32px' }}>
-        <button
-          onClick={handlePortalRedirect}
-          style={{
-            padding: '14px',
-            backgroundColor: '#1a1a1a',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: 'pointer',
-          }}
-        >
-          Manage Payment Method
-        </button>
-
-        {isSubscriptionActive && !hasCancellationRequest && (
-          <button
-            onClick={() => setShowCancelModal(true)}
-            style={{
-              padding: '14px',
-              backgroundColor: 'white',
-              color: '#c00',
-              border: '2px solid #c00',
-              borderRadius: '4px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-          >
-            Request Cancellation
-          </button>
-        )}
       </div>
 
       {/* Cancel Modal */}
       {showCancelModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '32px',
-            borderRadius: '8px',
-            maxWidth: '400px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          }}>
-            <h2 style={{ fontFamily: 'Cormorant Garamond', fontSize: '28px', marginBottom: '16px' }}>
-              Request Cancellation
-            </h2>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
-              <strong>Important:</strong> Per your rental agreement, 30 days written notice is required. By submitting this request, you confirm that you have already provided 30 days notice.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
+            <h2 className="font-display text-2xl font-semibold text-navy mb-3">Request Cancellation</h2>
+            <p className="text-sm text-espresso/70 leading-relaxed mb-6">
+              Per your rental agreement, <strong>30 days written notice</strong> is required. 
+              By submitting this request, you confirm that you have already provided written notice to the salon.
+              Your subscription will remain active for 30 more days.
             </p>
 
-            <label style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+            <label className="flex items-start gap-3 cursor-pointer mb-8">
               <input
                 type="checkbox"
                 checked={cancelConfirmed}
                 onChange={(e) => setCancelConfirmed(e.target.checked)}
-                style={{ marginRight: '12px', width: '18px', height: '18px', cursor: 'pointer' }}
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-navy"
               />
-              <span style={{ fontSize: '14px', cursor: 'pointer' }}>
-                I confirm that I have given 30 days written notice to the salon
+              <span className="text-sm text-espresso leading-relaxed">
+                I confirm I have given 30 days written notice to Suede Salon and understand no refunds will be issued.
               </span>
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setShowCancelModal(false)}
-                style={{
-                  padding: '12px',
-                  backgroundColor: '#e0e0e0',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                }}
+                onClick={() => { setShowCancelModal(false); setCancelConfirmed(false); }}
+                className="rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy hover:text-navy transition-colors"
               >
-                Close
+                Keep My Chair
               </button>
               <button
                 onClick={handleRequestCancellation}
                 disabled={!cancelConfirmed || cancelLoading}
-                style={{
-                  padding: '12px',
-                  backgroundColor: cancelConfirmed ? '#c00' : '#ccc',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: cancelConfirmed ? 'pointer' : 'default',
-                  fontWeight: '600',
-                }}
+                className="rounded-sm bg-destructive py-3 text-[0.74rem] uppercase tracking-[0.22em] text-white transition-opacity disabled:opacity-40"
               >
-                {cancelLoading ? 'Submitting...' : 'Submit Request'}
+                {cancelLoading ? 'Submitting…' : 'Submit Request'}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <div style={{
-        padding: '24px',
-        backgroundColor: '#f9f9f9',
-        borderRadius: '8px',
-        textAlign: 'center',
-        borderTop: '1px solid #e0e0e0',
-      }}>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-          Questions or issues?
-        </p>
-        <p style={{ fontSize: '14px' }}>
-          Contact us at <strong>admin@suede-salon.com</strong>
-        </p>
-      </div>
-    </div>
+    </SiteLayout>
   );
 }
