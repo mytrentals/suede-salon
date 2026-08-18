@@ -14,7 +14,7 @@ function Logo({ className = '' }) {
             <img
                 src="/suede-logo.png"
                 alt="Suede Salon crest"
-                className="h-14 w-14 object-contain"
+		className="h-16 w-auto object-contain"
             />
         </Link>
     );
@@ -104,7 +104,7 @@ export function SiteFooter() {
                     <img
                         src="/suede-logo.png"
                         alt="Suede Salon crest"
-                        className="mb-4 h-20 w-20 object-contain"
+			className="mb-4 h-20 w-auto object-contain"
                     />
                     <p className="mt-4 max-w-xs text-sm leading-relaxed text-background/70">
                         A boutique chair-rental salon in Town and Country, Missouri — locally owned,
