@@ -20,6 +20,11 @@ export function AdminDashboardPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [showAddLocation, setShowAddLocation] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(null);
+  const [confirmDeleteLocation, setConfirmDeleteLocation] = useState(null);
+  const [locationForm, setLocationForm] = useState({ name: '', address: '', maxChairs: 7 });
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     if (token) fetchData();
@@ -305,37 +310,67 @@ export function AdminDashboardPage() {
             </div>
           )}
 
-          {/* Locations Tab */}
+{/* Locations Tab */}
           {activeTab === 'locations' && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {(data?.locations || []).map(location => {
-                const occupancy = Math.round((location.active_stylists / location.max_chairs) * 100);
-                return (
-                  <div key={location.id} className="rounded-md border border-border bg-card p-8">
-                    <h3 className="font-display text-2xl font-semibold text-navy">{location.name}</h3>
-                    <p className="mt-1 text-xs text-espresso/50">{location.address}</p>
-                    <div className="mt-6 space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Occupancy</span>
-                          <span className="text-sm font-medium text-espresso">{occupancy}%</span>
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <p className="text-sm text-espresso/60">{(data?.locations || []).length} location{(data?.locations || []).length !== 1 ? 's' : ''} configured</p>
+                <button
+                  onClick={() => { setLocationForm({ name: '', address: '', maxChairs: 7 }); setShowAddLocation(true); }}
+                  className="rounded-sm bg-ink px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform hover:-translate-y-0.5"
+                >
+                  + Add Location
+                </button>
+              </div>
+
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {(data?.locations || []).map(location => {
+                  const occupancy = Math.round((location.active_stylists / location.max_chairs) * 100);
+                  return (
+                    <div key={location.id} className="rounded-md border border-border bg-card p-8">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-display text-2xl font-semibold text-navy">{location.name}</h3>
+                          <p className="mt-1 text-xs text-espresso/50">{location.address}</p>
                         </div>
-                        <div className="h-2 rounded-full bg-border">
-                          <div className="h-2 rounded-full bg-camel transition-all" style={{ width: `${occupancy}%` }} />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setEditingLocation(location); setLocationForm({ name: location.name, address: location.address, maxChairs: location.max_chairs }); }}
+                            className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-navy hover:text-navy transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteLocation(location)}
+                            className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-destructive hover:text-destructive transition-colors"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
-                      <div className="flex justify-between border-t border-border pt-4">
-                        <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Active</span>
-                        <span className="text-sm font-medium text-espresso">{location.active_stylists} / {location.max_chairs}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Available</span>
-                        <span className="text-sm font-medium text-espresso">{location.max_chairs - location.active_stylists} chairs</span>
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between mb-2">
+                            <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Occupancy</span>
+                            <span className="text-sm font-medium text-espresso">{occupancy}%</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-border">
+                            <div className="h-2 rounded-full bg-camel transition-all" style={{ width: `${occupancy}%` }} />
+                          </div>
+                        </div>
+                        <div className="flex justify-between border-t border-border pt-4">
+                          <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Active</span>
+                          <span className="text-sm font-medium text-espresso">{location.active_stylists} / {location.max_chairs}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Available</span>
+                          <span className="text-sm font-medium text-espresso">{location.max_chairs - location.active_stylists} chairs</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
 
