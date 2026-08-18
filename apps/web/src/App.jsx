@@ -7,6 +7,7 @@ import ContactPage from './pages/ContactPage';
 import { StylistSignupPage } from './pages/Onboarding/StylistSignup';
 import { StylistDashboardPage } from './pages/Onboarding/StylistDashboard';
 import { AdminDashboardPage } from './pages/Onboarding/AdminDashboard';
+import { StylistLoginPage } from './pages/Onboarding/StylistLogin';
 
 function App() {
     return (
@@ -19,6 +20,7 @@ function App() {
                 <Route path="/signup" element={<StylistSignupPage />} />
                 <Route path="/stylist/dashboard/:token" element={<StylistDashboardPage />} />
                 <Route path="/admin/dashboard/:token" element={<AdminDashboardPage />} />
+                <Route path="/stylist/login" element={<StylistLoginPage />} />
             </Routes>
         </Router>
     );
