@@ -39,13 +39,13 @@ export function StylistSignupPage() {
         return;
       }
       const data = await response.json();
-      // Pre-fill location from invite with full details
+      // Pre-fill location from invite with full details from database
       setLocations([{
         id: data.invite.location_id,
-        name: data.invite.name || data.location?.name || 'Suede Salon',
-        address: data.invite.address || data.location?.address || '',
-        available_chairs: data.invite.available_chairs || data.location?.available_chairs || 7,
-        max_chairs: data.invite.max_chairs || data.location?.max_chairs || 7,
+        name: data.invite.location_name, // Use location_name from DB
+        address: data.invite.address,
+        available_chairs: 7,
+        max_chairs: 7,
       }]);
       setLocationId(data.invite.location_id);
       setInviteValidating(false);
