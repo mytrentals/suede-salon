@@ -385,11 +385,12 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
         return;
       }
 
-      // Mark invite as used
+      // Only mark invite as used and proceed if payment succeeded
       if (inviteToken) {
         await fetch(`${import.meta.env.VITE_API_URL}/api/invite/${inviteToken}/use`, { method: 'POST' });
       }
-      onSuccess({ ...data, tier, name: formData.name, paymentFailed: data.requiresPaymentUpdate });
+      
+      onSuccess({ ...data, tier, name: formData.name, location: locationName });
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error(err);
