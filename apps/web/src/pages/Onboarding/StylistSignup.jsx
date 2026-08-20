@@ -320,16 +320,62 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [formData, setFormData] = useState({
-    name: '', email: prefilledEmail || '', phone: '', licenseNumber: '', startDate: '',
+    name: '', email: prefilledEmail || '', phone: '', licenseNumber: '', insuranceCarrier: '', startDate: '',
   });
 
+  // Validation functions
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone) => {
+    const phoneRegex = /^(\d{3}[-.\s]?)?\d{3}[-.\s]?\d{4}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+  };
+
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.name.trim()) errors.name = 'Full name is required';
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    if (!formData.phone.trim()) {
+      errors.phone = 'Phone number is required';
+    } else if (!validatePhone(formData.phone)) {
+      errors.phone = 'Please enter a valid phone number (e.g., 314-555-0100)';
+    }
+    if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required';
+    if (!formData.insuranceCarrier.trim()) errors.insuranceCarrier = 'Insurance carrier is required';
+    if (!formData.startDate) errors.startDate = 'Start date is required';
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    // Clear error for this field when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors({ ...fieldErrors, [name]: '' });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form before submitting
+    if (!validateForm()) {
+      setError('Please fix the errors above and try again.');
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
 
@@ -418,23 +464,33 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
       <div className="space-y-5">
         <div>
           <label className={labelClass}>Full Name</label>
-          <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Jane Smith" className={inputClass} />
+          <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Jane Smith" className={inputClass} />
+          {fieldErrors.name && <p className="mt-1 text-xs text-destructive">{fieldErrors.name}</p>}
         </div>
         <div>
           <label className={labelClass}>Email Address</label>
-          <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="jane@example.com" className={inputClass} />
+          <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="jane@example.com" className={inputClass} />
+          {fieldErrors.email && <p className="mt-1 text-xs text-destructive">{fieldErrors.email}</p>}
         </div>
         <div>
           <label className={labelClass}>Phone Number</label>
-          <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required placeholder="314-555-0100" className={inputClass} />
+          <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="314-555-0100" className={inputClass} />
+          {fieldErrors.phone && <p className="mt-1 text-xs text-destructive">{fieldErrors.phone}</p>}
         </div>
         <div>
           <label className={labelClass}>Missouri License Number</label>
-          <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} required placeholder="MO-XXXXXXX" className={inputClass} />
+          <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} placeholder="MO-XXXXXXX" className={inputClass} />
+          {fieldErrors.licenseNumber && <p className="mt-1 text-xs text-destructive">{fieldErrors.licenseNumber}</p>}
+        </div>
+        <div>
+          <label className={labelClass}>Liability Insurance Carrier</label>
+          <input type="text" name="insuranceCarrier" value={formData.insuranceCarrier} onChange={handleChange} placeholder="e.g., State Farm, Allstate" className={inputClass} />
+          {fieldErrors.insuranceCarrier && <p className="mt-1 text-xs text-destructive">{fieldErrors.insuranceCarrier}</p>}
         </div>
         <div>
           <label className={labelClass}>Desired Start Date</label>
-          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required className={inputClass} />
+          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={inputClass} />
+          {fieldErrors.startDate && <p className="mt-1 text-xs text-destructive">{fieldErrors.startDate}</p>}
         </div>
 
         <div>
