@@ -511,18 +511,6 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
               }}
             />
 
-            <PaymentElement
-              options={{
-              restrict: {
-                allowedPaymentMethodTypes: ['card', 'us_bank_account'],
-                },
-                wallets: {
-                  applePay: 'never',
-                  googlePay: 'never',
-                },
-              }}
-            />
-
           </div>
         </div>
       </div>
