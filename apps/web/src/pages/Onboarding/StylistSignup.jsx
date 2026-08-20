@@ -396,7 +396,7 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
       const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
         elements,
         params: {
-          billing_details: { name: formData.name, email: formData.email },
+          billing_details: { name: formData.name, email: formData.email, phone: formData.phone },
         },
       });
 
@@ -496,8 +496,20 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
         <div>
           <label className={labelClass}>Payment Method</label>
           <p className="mb-3 text-xs text-espresso/50 leading-relaxed">
-            ACH bank transfer recommended — lower fees. Card also accepted.
+            ACH bank transfer recommended. Card also accepted.
           </p>
+
+            <PaymentElement
+              options={{
+                restrict: {
+                  allowedPaymentMethodTypes: ['card', 'us_bank_account'],
+                },
+                wallets: {
+                  applePay: 'never',
+                  googlePay: 'never',
+                },
+              }}
+            />
 
             <PaymentElement
               options={{
