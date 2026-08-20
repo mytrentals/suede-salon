@@ -39,14 +39,8 @@ export function StylistSignupPage() {
         return;
       }
       const data = await response.json();
-      // Pre-fill location from invite with full details from database
-      setLocations([{
-        id: data.invite.location_id,
-        name: data.invite.location_name, // Use location_name from DB
-        address: data.invite.address,
-        available_chairs: 7,
-        max_chairs: 7,
-      }]);
+      // Pre-fill location from invite
+      setLocations([{ ...data.invite, available_chairs: 7, max_chairs: 7 }]);
       setLocationId(data.invite.location_id);
       setInviteValidating(false);
       setLoading(false);
@@ -110,22 +104,18 @@ export function StylistSignupPage() {
               <ul className="space-y-3 text-sm leading-relaxed text-espresso/80">
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">1.</span>
-                  <span>Check your email — we've sent your Salon Chair Rental Agreement for you to sign.</span>
+                  <span>Check your email — we've sent a confirmation with your dashboard link.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">2.</span>
-                  <span>Once signed, you'll receive a dashboard link to manage your subscription and payment method.</span>
+                  <span>Your dashboard lets you manage your subscription, update payment, or request cancellation.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">3.</span>
-                  <span>Your first charge will be on <strong>{confirmation.nextBillingDate}</strong>.</span>
+                  <span>Your first billing date is today. Subsequent charges will follow your {confirmation.tier === 'weekly' ? 'weekly' : 'monthly'} cycle.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">4.</span>
-                  <span>Subsequent charges will follow your {confirmation.tier === 'weekly' ? 'weekly' : 'monthly'} cycle from that date.</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-camel font-semibold">5.</span>
                   <span>Remember: per your rental agreement, 30 days written notice is required to cancel.</span>
                 </li>
               </ul>
@@ -389,12 +379,11 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
         return;
       }
 
-      // Only mark invite as used and proceed if payment succeeded
+      // Mark invite as used
       if (inviteToken) {
         await fetch(`${import.meta.env.VITE_API_URL}/api/invite/${inviteToken}/use`, { method: 'POST' });
       }
-      
-      onSuccess({ ...data, tier, name: formData.name, location: locationName, nextBillingDate: formData.startDate });
+      onSuccess({ ...data, tier, name: formData.name, paymentFailed: data.requiresPaymentUpdate });
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error(err);
