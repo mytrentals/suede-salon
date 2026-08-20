@@ -513,7 +513,8 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
 
           </div>
         </div>
-      </div>
+
+      {error && (
         <div className="mt-6 rounded-sm border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
