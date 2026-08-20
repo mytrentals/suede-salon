@@ -110,18 +110,22 @@ export function StylistSignupPage() {
               <ul className="space-y-3 text-sm leading-relaxed text-espresso/80">
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">1.</span>
-                  <span>Check your email — we've sent a confirmation with your dashboard link.</span>
+                  <span>Check your email — we've sent your Salon Chair Rental Agreement for you to sign.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">2.</span>
-                  <span>Your dashboard lets you manage your subscription, update payment, or request cancellation.</span>
+                  <span>Once signed, you'll receive a dashboard link to manage your subscription and payment method.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">3.</span>
-                  <span>Your first billing date is today. Subsequent charges will follow your {confirmation.tier === 'weekly' ? 'weekly' : 'monthly'} cycle.</span>
+                  <span>Your first charge will be on <strong>{confirmation.nextBillingDate}</strong>.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">4.</span>
+                  <span>Subsequent charges will follow your {confirmation.tier === 'weekly' ? 'weekly' : 'monthly'} cycle from that date.</span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="text-camel font-semibold">5.</span>
                   <span>Remember: per your rental agreement, 30 days written notice is required to cancel.</span>
                 </li>
               </ul>
@@ -390,7 +394,7 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
         await fetch(`${import.meta.env.VITE_API_URL}/api/invite/${inviteToken}/use`, { method: 'POST' });
       }
       
-      onSuccess({ ...data, tier, name: formData.name, location: locationName });
+      onSuccess({ ...data, tier, name: formData.name, location: locationName, nextBillingDate: formData.startDate });
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error(err);
