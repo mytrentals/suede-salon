@@ -443,14 +443,20 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
             ACH bank transfer recommended — lower fees. Card also accepted.
           </p>
           <div className="rounded-sm border border-border bg-card p-4">
+
             <PaymentElement
               options={{
+                paymentMethodOrder: ['card', 'us_bank_account'],
                 wallets: {
                   applePay: 'never',
                   googlePay: 'never',
                 },
+                fields: {
+                  billingDetails: 'never',
+                },
               }}
             />
+
           </div>
         </div>
       </div>
