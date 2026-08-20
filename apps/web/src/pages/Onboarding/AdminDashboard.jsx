@@ -550,8 +550,8 @@ export function AdminDashboardPage() {
                               }`}>{status}</span>
                             </td>
                             <td className="px-5 py-4">
-                              {!invite.used && (
-                                <div className="flex gap-2">
+                              <div className="flex gap-2">
+                                {!invite.used && (
                                   <button onClick={async () => {
                                     const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}/resend`, {
                                       method: 'POST', headers: { 'x-admin-token': token }
@@ -561,18 +561,18 @@ export function AdminDashboardPage() {
                                   }} className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-navy hover:text-navy transition-colors whitespace-nowrap">
                                     Resend
                                   </button>
-                                  <button onClick={async () => {
-                                    if (!confirm('Revoke this invite?')) return;
-                                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}`, {
-                                      method: 'DELETE', headers: { 'x-admin-token': token }
-                                    });
-                                    if (response.ok) { showSuccess('Invite revoked.'); await fetchData(); }
-                                    else alert('Failed to revoke invite');
-                                  }} className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-destructive hover:text-destructive transition-colors whitespace-nowrap">
-                                    Revoke
-                                  </button>
-                                </div>
-                              )}
+                                )}
+                                <button onClick={async () => {
+                                  if (!confirm(`Delete this invite?`)) return;
+                                  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}`, {
+                                    method: 'DELETE', headers: { 'x-admin-token': token }
+                                  });
+                                  if (response.ok) { showSuccess('Invite deleted.'); await fetchData(); }
+                                  else alert('Failed to delete invite');
+                                }} className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-destructive hover:text-destructive transition-colors whitespace-nowrap">
+                                  Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
