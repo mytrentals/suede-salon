@@ -86,7 +86,7 @@ export function StylistSignupPage() {
                 </div>
                 <div className="flex justify-between border-b border-border pb-4">
                   <span className="text-sm text-espresso/60 uppercase tracking-[0.15em]">Plan</span>
-                  <span className="text-sm font-medium text-espresso">{confirmation.tier === 'weekly' ? '$300 / week' : '$1,100 / month'}</span>
+                  <span className="text-sm font-medium text-espresso">{confirmation.tier === 'weekly' ? '$300 / week' : confirmation.tier === 'monthly' ? '$1,100 / month' : '$1 / test'}</span>
                 </div>
                 <div className="flex justify-between border-b border-border pb-4">
                   <span className="text-sm text-espresso/60 uppercase tracking-[0.15em]">Status</span>
@@ -112,7 +112,7 @@ export function StylistSignupPage() {
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">3.</span>
-                  <span>Your first billing date is today. Subsequent charges will follow your {confirmation.tier === 'weekly' ? 'weekly' : 'monthly'} cycle.</span>
+                  <span>Your first billing date is today. Subsequent charges will follow your {confirmation.tier === 'weekly' ? 'weekly' : confirmation.tier === 'monthly' ? 'monthly' : 'test'} cycle.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">4.</span>
@@ -242,6 +242,7 @@ export function StylistSignupPage() {
               {[
                 { id: 'weekly', label: 'Weekly', price: '$300', period: '/week', desc: 'Ideal for part-time or building stylists', amount: 30000 },
                 { id: 'monthly', label: 'Monthly', price: '$1,100', period: '/month', desc: 'Best value for full-time professionals', amount: 110000 },
+                { id: 'test', label: 'Test', price: '$1', period: '/test', desc: 'Test the complete flow', amount: 100 },
               ].map((t) => (
                 <div
                   key={t.id}
@@ -456,7 +457,7 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
           </div>
           <div className="text-right">
             <p className="text-[0.7rem] uppercase tracking-[0.2em] text-espresso/50">Plan</p>
-            <p className="text-sm font-medium text-espresso mt-0.5">{tier === 'weekly' ? '$300/week' : '$1,100/month'}</p>
+            <p className="text-sm font-medium text-espresso mt-0.5">{tier === 'weekly' ? '$300/week' : tier === 'monthly' ? '$1,100/month' : '$1/test'}</p>
           </div>
         </div>
       </div>
