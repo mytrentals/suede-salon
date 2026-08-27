@@ -39,8 +39,14 @@ export function StylistSignupPage() {
         return;
       }
       const data = await response.json();
-      // Pre-fill location from invite
-      setLocations([{ ...data.invite, available_chairs: 7, max_chairs: 7 }]);
+      // Pre-fill location from invite - create proper location object
+      setLocations([{ 
+        id: data.invite.location_id, 
+        name: data.invite.name,
+        address: data.invite.address,
+        max_chairs: data.invite.max_chairs || 7,
+        available_chairs: data.invite.max_chairs || 7
+      }]);
       setLocationId(data.invite.location_id);
       setInviteValidating(false);
       setLoading(false);
@@ -285,7 +291,7 @@ export function StylistSignupPage() {
                 options={{
                   mode: 'subscription',
                   currency: 'usd',
-                  amount: tier === 'weekly' ? 30000 : 110000,
+                  amount: tier === 'weekly' ? 30000 : tier === 'monthly' ? 110000 : 100,
                   paymentMethodCreation: 'manual',
                   appearance: {
                     theme: 'stripe',
