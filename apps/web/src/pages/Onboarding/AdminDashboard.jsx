@@ -49,7 +49,18 @@ export function AdminDashboardPage() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/subscriptions/${token}`);
       if (!response.ok) { setError('Invalid or expired admin link'); setLoading(false); return; }
       const result = await response.json();
-      setData(result);
+      
+      // Fetch locations
+      const locResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/locations`);
+      let locations = [];
+      if (locResponse.ok) {
+        const locData = await locResponse.json();
+        locations = locData.locations || [];
+      }
+      
+      // Merge locations into data
+      setData({ ...result, locations });
+      
       // Also fetch invites
       const inviteRes = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invites/${token}`, {
         headers: { 'x-admin-token': token }
