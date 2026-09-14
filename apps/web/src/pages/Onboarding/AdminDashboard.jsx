@@ -297,7 +297,7 @@ export function AdminDashboardPage() {
                           <td className="px-5 py-4 text-sm text-espresso/70">{stylist.location_name}</td>
                           <td className="px-5 py-4">
                             <span className="inline-block rounded-sm border border-camel/40 px-2 py-1 text-[0.65rem] uppercase tracking-[0.1em] text-camel">
-                              {stylist.tier === 'weekly' ? '$300/wk' : '$1,100/mo'}
+                              {stylist.tier === 'weekly' ? '$300/wk' : stylist.tier === 'monthly' ? '$1,100/mo' : '$1/test'}
                             </span>
                           </td>
                           <td className="px-5 py-4">
@@ -307,7 +307,10 @@ export function AdminDashboardPage() {
                               stylist.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-border text-espresso/50'
                             }`}>
                               {stylist.status === 'deactivated' ? 'Deactivated' :
-                               stylist.requested_cancellation_date ? 'Cancelling' : stylist.status}
+                               stylist.requested_cancellation_date ? 'Cancelling' : 
+                               stylist.status === 'active' ? 'Active' :
+                               stylist.status === 'pending_agreement' ? 'Pending Agreement' : 
+                               stylist.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                             </span>
                             {stylist.requested_cancellation_date && (
                               <p className="text-xs text-espresso/40 mt-1">Until {new Date(stylist.requested_cancellation_date).toLocaleDateString()}</p>
@@ -498,7 +501,7 @@ export function AdminDashboardPage() {
                             <td className="px-5 py-4 text-sm text-espresso/70">{renewal.location_name}</td>
                             <td className="px-5 py-4">
                               <span className="inline-block rounded-sm border border-camel/40 px-2 py-1 text-[0.65rem] uppercase tracking-[0.1em] text-camel">
-                                {renewal.tier === 'weekly' ? '$300/wk' : '$1,100/mo'}
+                                {renewal.tier === 'weekly' ? '$300/wk' : renewal.tier === 'monthly' ? '$1,100/mo' : '$1/test'}
                               </span>
                             </td>
                             <td className="px-5 py-4 text-sm text-espresso/70">
