@@ -20,8 +20,6 @@ export function AdminDashboardPage() {
   const [confirmDeactivate, setConfirmDeactivate] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
-  const [resendingLink, setResendingLink] = useState(null);
-  const [resendLinkLoading, setResendLinkLoading] = useState(false);
   const [invites, setInvites] = useState([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', locationId: '' });
@@ -90,25 +88,6 @@ export function AdminDashboardPage() {
   };
 
   const showSuccess = (msg) => { setSuccessMessage(msg); setTimeout(() => setSuccessMessage(null), 4000); };
-
-  const handleResendSigningLink = async (stylist) => {
-    setResendLinkLoading(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/resend-signing-link/${stylist.id}`, {
-        method: 'POST',
-        headers: { 'x-admin-token': token },
-      });
-      if (response.ok) {
-        showSuccess(`Signing link resent to ${stylist.name}`);
-        setResendingLink(null);
-      } else {
-        alert('Failed to resend signing link');
-      }
-    } catch (err) {
-      alert('Error resending signing link');
-    }
-    setResendLinkLoading(false);
-  };
 
   const handleEdit = (stylist) => {
     setEditingStylest(stylist);
@@ -353,12 +332,6 @@ export function AdminDashboardPage() {
                                 <button onClick={() => setConfirmDeactivate(stylist)}
                                   className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-camel hover:text-camel transition-colors whitespace-nowrap">
                                   Deactivate
-                                </button>
-                              )}
-                              {stylist.status === 'pending_agreement' && (
-                                <button onClick={() => handleResendSigningLink(stylist)} disabled={resendLinkLoading}
-                                  className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-camel hover:border-camel hover:text-camel transition-colors whitespace-nowrap">
-                                  {resendLinkLoading ? 'Sending...' : 'Resend Link'}
                                 </button>
                               )}
                               {stylist.status === 'deactivated' && (

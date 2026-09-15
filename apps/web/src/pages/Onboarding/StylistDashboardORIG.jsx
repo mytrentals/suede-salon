@@ -17,8 +17,6 @@ export function StylistDashboardPage() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
   const [showPaymentRetry, setShowPaymentRetry] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
@@ -50,25 +48,6 @@ export function StylistDashboardPage() {
     } catch (err) {
       alert('Failed to open payment portal. Please try again.');
     }
-  };
-
-  const resendSigningLink = async () => {
-    setResendLoading(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stylist/resend-signing-link/${token}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (response.ok) {
-        setResendSuccess(true);
-        setTimeout(() => setResendSuccess(false), 5000);
-      } else {
-        alert('Failed to resend signing link. Please try again.');
-      }
-    } catch (err) {
-      alert('Error resending signing link. Please try again.');
-    }
-    setResendLoading(false);
   };
 
   const handleRequestCancellation = async () => {
@@ -160,26 +139,6 @@ export function StylistDashboardPage() {
             </div>
           )}
 
-          {/* Agreement Pending Banner */}
-          {subscription?.status === 'pending_agreement' && (
-            <div className="mb-8 rounded-md border border-destructive/40 bg-destructive/5 px-6 py-5">
-              <p className="text-sm font-semibold text-destructive mb-1">⏰ Action Required: Sign Your Agreement</p>
-              <p className="text-sm text-espresso/70 mb-4">
-                Your payment was received, but you must sign your Salon Chair Rental Agreement to activate your subscription. Check your email for the signing link (expires in 24 hours).
-              </p>
-              {resendSuccess && (
-                <p className="text-sm text-green-700 mb-4">✓ Signing link resent to your email</p>
-              )}
-              <button
-                onClick={resendSigningLink}
-                disabled={resendLoading}
-                className="rounded-sm bg-destructive px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.22em] text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {resendLoading ? 'Sending...' : 'Resend Signing Link'}
-              </button>
-            </div>
-          )}
-
           {/* Cancellation success */}
           {cancelSuccess && (
             <div className="mb-8 rounded-md border border-camel/40 bg-card px-6 py-4">
@@ -200,13 +159,13 @@ export function StylistDashboardPage() {
                   <span className={`text-sm font-medium ${
                     hasCancellationRequest ? 'text-destructive' : isActive ? 'text-green-700' : 'text-espresso/50'
                   }`}>
-                    {hasCancellationRequest ? 'Cancellation Pending' : isActive ? '✓ Active' : subscription?.status === 'pending_agreement' ? 'Pending Agreement' : subscription?.status}
+                    {hasCancellationRequest ? 'Cancellation Pending' : isActive ? '✓ Active' : subscription?.status}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-border pb-4">
                   <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Plan</span>
                   <span className="text-sm font-medium text-espresso">
-                    {subscription?.tier === 'weekly' ? '$300 / week' : subscription?.tier === 'monthly' ? '$1,100 / month' : '$1 / test'}
+                    {subscription?.tier === 'weekly' ? '$300 / week' : '$1,100 / month'}
                   </span>
                 </div>
                 <div className="flex justify-between border-b border-border pb-4">

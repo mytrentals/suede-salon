@@ -107,16 +107,10 @@ export function StylistSignupPage() {
 
             <div className="mt-8 rounded-lg bg-card border border-border px-8 py-8 text-left">
               <h3 className="font-display text-xl font-semibold text-navy mb-3">What happens next?</h3>
-              
-              <div className="mb-6 rounded-sm border-l-4 border-destructive bg-destructive/5 px-4 py-3">
-                <p className="text-sm font-semibold text-destructive">⏰ ACTION REQUIRED - Sign Within 24 Hours</p>
-                <p className="text-sm text-espresso/70 mt-2">Check your email for your Salon Chair Rental Agreement. You must sign it before <strong>{confirmation.startDate}</strong> when billing starts. The signing link expires in 24 hours.</p>
-              </div>
-              
               <ul className="space-y-3 text-sm leading-relaxed text-espresso/80">
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">1.</span>
-                  <span><strong>Sign your agreement</strong> — Check your email for the SignWell signing link (24-hour deadline).</span>
+                  <span>Check your email — we've sent a confirmation with your dashboard link.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">2.</span>
@@ -124,7 +118,7 @@ export function StylistSignupPage() {
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">3.</span>
-                  <span><strong>First billing date: {confirmation.startDate}</strong> Your initial charge will post on this date, then {confirmation.tier === 'weekly' ? 'every week' : confirmation.tier === 'monthly' ? 'every month' : 'based on your test cycle'}.</span>
+                  <span>Your first billing date is today. Subsequent charges will follow your {confirmation.tier === 'weekly' ? 'weekly' : confirmation.tier === 'monthly' ? 'monthly' : 'test'} cycle.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-camel font-semibold">4.</span>
@@ -442,10 +436,7 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
       if (inviteToken) {
         await fetch(`${import.meta.env.VITE_API_URL}/api/invite/${inviteToken}/use`, { method: 'POST' });
       }
-      
-      // Format start date for display
-      const startDate = data.startDate ? new Date(data.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      onSuccess({ ...data, tier, name: formData.name, paymentFailed: data.requiresPaymentUpdate, startDate });
+      onSuccess({ ...data, tier, name: formData.name, paymentFailed: data.requiresPaymentUpdate });
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error(err);
