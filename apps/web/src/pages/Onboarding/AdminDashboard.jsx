@@ -657,7 +657,7 @@ export function AdminDashboardPage() {
               ))}
               <div>
                 <label className={labelClass}>Billing Plan</label>
-                <select value={editForm.tier} onChange={(e) => setEditForm({...editForm, tier: e.target.value})} className={inputClass}>
+                <select value={editForm.tier || ''} onChange={(e) => setEditForm({...editForm, tier: e.target.value})} className={inputClass}>
                   <option value="weekly">Weekly — $300/week</option>
                   <option value="monthly">Monthly — $1,100/month</option>
                 </select>
