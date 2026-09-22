@@ -5,6 +5,7 @@ import { Menu, X } from 'lucide-react';
 const navItems = [
     { to: '/', label: 'Home' },
     { to: '/about', label: 'About Us' },
+    { to: '/meet-the-team', label: 'Meet the Team' },
     { to: '/contact', label: 'Contact Us' },
     { to: '/stylist/login', label: 'Stylist Login' },
 ];
