@@ -4,9 +4,9 @@ import ScrollToTop from '@/components/ScrollToTop';
 import HomePage from '@/pages/HomePage';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
-import { AdminLoginPage } from '@/pages/AdminLogin';
+import { AdminLoginPage } from '@/pages/Onboarding/AdminLogin';
 import { AdminDashboardPage } from '@/pages/Onboarding/AdminDashboard';
-import { StylistLoginPage } from '@/pages/StylistLogin';
+import { StylistLoginPage } from '@/pages/Onboarding/StylistLogin';
 import { StylistDashboardPage } from '@/pages/Onboarding/StylistDashboard';
 import { StylistSignupPage } from '@/pages/Onboarding/StylistSignup';
 
