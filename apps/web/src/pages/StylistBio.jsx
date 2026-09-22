@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import QRCode from 'qrcode.react';
 import SiteLayout from '@/components/SiteLayout';
 
 export function StylistBioPage() {
@@ -8,7 +7,6 @@ export function StylistBioPage() {
   const [stylist, setStylist] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const qrRef = React.useRef();
 
   useEffect(() => {
     const fetchStylist = async () => {
@@ -27,19 +25,6 @@ export function StylistBioPage() {
 
     fetchStylist();
   }, [id]);
-
-  const downloadQR = () => {
-    if (qrRef.current) {
-      const canvas = qrRef.current.querySelector('canvas');
-      if (canvas) {
-        const url = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${stylist.name}-booking.png`;
-        link.click();
-      }
-    }
-  };
 
   if (loading) {
     return (
@@ -112,23 +97,15 @@ export function StylistBioPage() {
                     <h3 className="font-display text-lg font-semibold text-navy mb-4">Quick Book</h3>
                     <p className="text-xs text-espresso/60 mb-6">Scan to view availability and book an appointment</p>
                     
-                    <div ref={qrRef} className="flex justify-center mb-6">
-                      <QRCode
-                        value={stylist.glossgenius_link}
-                        size={200}
-                        level="H"
-                        includeMargin={true}
-                        fgColor="#1a3a3a"
-                        bgColor="#f5f5f5"
+                    <div className="flex justify-center mb-6">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(stylist.glossgenius_link)}`}
+                        alt="QR code for booking"
+                        className="border-2 border-navy"
                       />
                     </div>
 
-                    <button
-                      onClick={downloadQR}
-                      className="w-full text-xs font-semibold text-navy border border-border rounded-sm py-2 hover:bg-card transition-colors mb-4"
-                    >
-                      Download QR Code
-                    </button>
+                    <p className="text-xs text-espresso/60 mb-6">Scan with your phone camera to book instantly</p>
 
                     <a
                       href={stylist.glossgenius_link}
