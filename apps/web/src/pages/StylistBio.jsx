@@ -57,7 +57,7 @@ export function StylistBioPage() {
 
   return (
     <SiteLayout>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-32">
         {/* Back Link */}
         <div className="border-b border-border bg-card px-6 py-4">
           <div className="mx-auto max-w-6xl">

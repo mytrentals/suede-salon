@@ -27,7 +27,7 @@ export function MeetTheTeamPage() {
 
   return (
     <SiteLayout>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pt-32">
         {/* Hero */}
         <div className="border-b border-border bg-card py-16 px-6">
           <div className="mx-auto max-w-7xl">
