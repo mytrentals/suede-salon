@@ -31,6 +31,18 @@ export function AdminDashboardPage() {
   const [confirmDeleteLocation, setConfirmDeleteLocation] = useState(null);
   const [locationForm, setLocationForm] = useState({ name: '', address: '', maxChairs: 7 });
   const [locationLoading, setLocationLoading] = useState(false);
+  
+  // Bio editor state
+  const [editingBio, setEditingBio] = useState(null);
+  const [bioForm, setBioForm] = useState({
+    introduction: '',
+    experience: '',
+    servicesOffered: '',
+    glossgeniusLink: '',
+    headshotUrl: '',
+  });
+  const [bioLoading, setBioLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -129,6 +141,78 @@ export function AdminDashboardPage() {
     setEditLoading(false);
   };
 
+  const handleEditBio = (stylist) => {
+    setEditingBio(stylist);
+    setBioForm({
+      introduction: stylist.introduction || '',
+      experience: stylist.experience || '',
+      servicesOffered: stylist.services_offered || '',
+      glossgeniusLink: stylist.glossgenius_link || '',
+      headshotUrl: stylist.headshot_url || '',
+    });
+  };
+
+  const handleHeadshotUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Data = event.target?.result;
+        // Store base64 directly (Railway will serve it)
+        setBioForm({ ...bioForm, headshotUrl: base64Data });
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      alert('Error uploading image');
+      setUploadingImage(false);
+    }
+  };
+
+  const handleBioSubmit = async (e) => {
+    e.preventDefault();
+    setBioLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stylists/${editingBio.id}/bio`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify(bioForm),
+      });
+      if (response.ok) {
+        setEditingBio(null);
+        showSuccess('Bio updated successfully.');
+        await fetchData();
+      } else {
+        const d = await response.json();
+        alert(d.error || 'Failed to update bio');
+      }
+    } catch (err) {
+      alert('Error updating bio');
+    }
+    setBioLoading(false);
+  };
+
+  const handleTogglePublish = async (stylist) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stylists/${stylist.id}/publish`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ isPublished: !stylist.is_published }),
+      });
+      if (response.ok) {
+        showSuccess(`${stylist.name} ${!stylist.is_published ? 'published' : 'unpublished'}.`);
+        await fetchData();
+      } else {
+        alert('Failed to update publish status');
+      }
+    } catch (err) {
+      alert('Error updating publish status');
+    }
+  };
+
   const handleDeactivate = async (stylist) => {
     setActionLoading(true);
     try {
@@ -153,529 +237,390 @@ export function AdminDashboardPage() {
     setActionLoading(false);
   };
 
-  const handleReactivate = async (stylist) => {
-    setActionLoading(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stylist/${stylist.id}/reactivate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify({}),
-      });
-      if (response.ok) { showSuccess(`${stylist.name} reactivated.`); await fetchData(); }
-      else { const d = await response.json(); alert(d.error || 'Failed to reactivate'); }
-    } catch (err) { alert('Error reactivating'); }
-    setActionLoading(false);
-  };
-
-  const inputClass = "w-full rounded-sm border border-border bg-background px-4 py-2.5 text-sm text-espresso focus:outline-none focus:border-navy transition-colors";
-  const labelClass = "block mb-1.5 text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50";
-
-  if (loading) return (
-    <SiteLayout>
-      <div className="min-h-screen bg-background pt-32 flex items-center justify-center">
-        <p className="text-espresso/60 text-sm uppercase tracking-[0.2em]">Loading dashboard…</p>
+  if (loading) return <div className="flex h-screen items-center justify-center"><p className="text-navy">Loading...</p></div>;
+  if (!token && error) return (
+    <SiteLayout><div className="mx-auto max-w-2xl px-6 py-12">
+      <div className="rounded-md border border-border bg-card p-8">
+        <h1 className="font-display text-3xl font-semibold text-navy mb-4">Admin Access</h1>
+        <form onSubmit={requestAdminLink} className="space-y-4">
+          <div>
+            <label className="text-sm font-semibold text-navy uppercase tracking-widest">Admin Email</label>
+            <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required
+              className="mt-2 w-full rounded-sm border border-border bg-background px-4 py-3 text-sm text-espresso focus:border-navy focus:outline-none" />
+          </div>
+          <button type="submit" disabled={requestingLink}
+            className="w-full rounded-sm bg-ink py-3 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-40">
+            {requestingLink ? 'Sending...' : 'Request Magic Link'}
+          </button>
+        </form>
       </div>
-    </SiteLayout>
-  );
-
-  if (error || !token) return (
-    <SiteLayout>
-      <div className="min-h-screen bg-background pt-32 pb-24">
-        <div className="mx-auto max-w-[36rem] px-6 text-center">
-          <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Admin Access</span>
-          <h1 className="mt-4 font-display text-4xl font-semibold text-ink">{error || 'Sign In'}</h1>
-          {!showEmailForm ? (
-            <button onClick={() => setShowEmailForm(true)} className="mt-8 rounded-sm bg-ink px-8 py-4 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform hover:-translate-y-0.5">
-              Request Access Link
-            </button>
-          ) : (
-            <form onSubmit={requestAdminLink} className="mt-8 text-left">
-              <label className={labelClass}>Admin Email</label>
-              <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required placeholder="your@email.com" className={`${inputClass} mb-4`} />
-              <button type="submit" disabled={requestingLink} className="w-full rounded-sm bg-ink py-4 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40">
-                {requestingLink ? 'Sending…' : 'Send Magic Link'}
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
-    </SiteLayout>
+    </div></SiteLayout>
   );
 
   const stylists = data?.stylists || [];
-  const activeCount = stylists.filter(s => s.status === 'active').length;
-  const deactivatedCount = stylists.filter(s => s.status === 'deactivated').length;
-  const pendingCancellations = stylists.filter(s => s.requested_cancellation_date).length;
-  const monthlyRevenue = stylists.filter(s => s.status === 'active' && s.tier === 'monthly').length * 1100;
-  const weeklyRevenue = stylists.filter(s => s.status === 'active' && s.tier === 'weekly').length * 300;
-  const projectedMonthly = monthlyRevenue + (weeklyRevenue * 4);
+  const locations = data?.locations || [];
+  
+  const inputClass = 'w-full rounded-sm border border-border bg-background px-4 py-3 text-sm text-espresso focus:border-navy focus:outline-none';
+  const labelClass = 'text-sm font-semibold text-navy uppercase tracking-widest';
 
   const filteredStylists = stylists.filter(s => {
+    if (filterStatus !== 'all' && s.agreement_status !== filterStatus) return false;
     if (filterLocation !== 'all' && s.location_id !== parseInt(filterLocation)) return false;
-    if (filterStatus === 'active' && s.status !== 'active') return false;
-    if (filterStatus === 'deactivated' && s.status !== 'deactivated') return false;
-    if (filterStatus === 'cancellation' && !s.requested_cancellation_date) return false;
     return true;
   });
 
   return (
     <SiteLayout>
-      <div className="min-h-screen bg-background pt-32 pb-24">
-        <div className="mx-auto max-w-[90rem] px-6">
-          <div className="mb-10 flex items-start justify-between">
-            <div>
-              <span className="text-[0.72rem] uppercase tracking-[0.4em] text-camel">Suede Salon</span>
-              <h1 className="mt-2 font-display text-5xl font-semibold text-ink">Admin Dashboard</h1>
-            </div>
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="mt-4 rounded-sm bg-ink px-6 py-3 text-[0.72rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform hover:-translate-y-0.5"
-            >
-              + Invite Stylist
-            </button>
-          </div>
-
-          {successMessage && (
-            <div className="mb-6 rounded-sm border border-camel/40 bg-card px-5 py-3 text-sm text-espresso">✓ {successMessage}</div>
-          )}
-
-          {/* Stats */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-10">
-            {[
-              { label: 'Active Stylists', value: activeCount, accent: 'border-l-camel' },
-              { label: 'Deactivated', value: deactivatedCount, accent: 'border-l-espresso/30' },
-              { label: 'Pending Cancellation', value: pendingCancellations, accent: 'border-l-destructive' },
-              { label: 'Monthly Chair Revenue', value: `$${monthlyRevenue.toLocaleString()}`, accent: 'border-l-navy' },
-              { label: 'Projected Monthly', value: `$${projectedMonthly.toLocaleString()}`, accent: 'border-l-hunter' },
-            ].map((stat) => (
-              <div key={stat.label} className={`rounded-md border-l-4 ${stat.accent} bg-card px-5 py-5 border border-border`}>
-                <p className="text-[0.65rem] uppercase tracking-[0.2em] text-espresso/50 mb-1">{stat.label}</p>
-                <p className="font-display text-3xl font-semibold text-ink">{stat.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-0 mb-8 border-b border-border">
-            {[
-              { id: 'stylists', label: 'Stylists' },
-              { id: 'locations', label: 'Locations' },
-              { id: 'revenue', label: 'Revenue' },
-              { id: 'renewals', label: 'Upcoming Renewals' },
-              { id: 'invites', label: `Invites${invites.length > 0 ? ` (${invites.filter(i => !i.used).length})` : ''}` },
-            ].map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-3 text-[0.72rem] uppercase tracking-[0.2em] transition-colors border-b-2 -mb-px ${
-                  activeTab === tab.id ? 'border-navy text-navy' : 'border-transparent text-espresso/50 hover:text-espresso'
-                }`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Stylists Tab */}
-          {activeTab === 'stylists' && (
-            <div>
-              <div className="flex flex-wrap gap-4 mb-6">
-                <div>
-                  <label className={labelClass}>Status</label>
-                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-                    className="rounded-sm border border-border bg-card px-4 py-2.5 text-sm text-espresso focus:outline-none focus:border-navy">
-                    <option value="all">All Statuses</option>
-                    <option value="active">Active</option>
-                    <option value="deactivated">Deactivated</option>
-                    <option value="cancellation">Pending Cancellation</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Location</label>
-                  <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)}
-                    className="rounded-sm border border-border bg-card px-4 py-2.5 text-sm text-espresso focus:outline-none focus:border-navy">
-                    <option value="all">All Locations</option>
-                    {(data?.locations || []).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="rounded-md border border-border overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-card">
-                        {['Stylist', 'Location', 'Plan', 'Status', 'Next Billing', 'Joined', 'Actions'].map(h => (
-                          <th key={h} className="px-5 py-4 text-left text-[0.65rem] uppercase tracking-[0.15em] text-espresso/50 font-medium whitespace-nowrap">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredStylists.length === 0 ? (
-                        <tr><td colSpan="7" className="px-5 py-10 text-center text-espresso/40 text-sm italic">No stylists found</td></tr>
-                      ) : filteredStylists.map((stylist, i) => (
-                        <tr key={stylist.id} className={`border-b border-border ${i % 2 === 0 ? 'bg-background' : 'bg-card'}`}>
-                          <td className="px-5 py-4">
-                            <p className="font-medium text-espresso">{stylist.name}</p>
-                            <p className="text-xs text-espresso/50">{stylist.email}</p>
-                            <p className="text-xs text-espresso/40">Lic: {stylist.license_number}</p>
-                          </td>
-                          <td className="px-5 py-4 text-sm text-espresso/70">{stylist.location_name}</td>
-                          <td className="px-5 py-4">
-                            <span className="inline-block rounded-sm border border-camel/40 px-2 py-1 text-[0.65rem] uppercase tracking-[0.1em] text-camel">
-                              {stylist.tier === 'weekly' ? '$300/wk' : stylist.tier === 'monthly' ? '$1,100/mo' : '$1/test'}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4">
-                            <span className={`inline-block rounded-sm px-2 py-1 text-[0.65rem] uppercase tracking-[0.1em] ${
-                              stylist.status === 'deactivated' ? 'bg-espresso/10 text-espresso/50' :
-                              stylist.requested_cancellation_date ? 'bg-destructive/10 text-destructive' :
-                              stylist.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-border text-espresso/50'
-                            }`}>
-                              {stylist.status === 'deactivated' ? 'Deactivated' :
-                               stylist.requested_cancellation_date ? 'Cancelling' : 
-                               stylist.status === 'active' ? 'Active' :
-                               stylist.status === 'pending_agreement' ? 'Pending Agreement' : 
-                               stylist.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </span>
-                            {stylist.requested_cancellation_date && (
-                              <p className="text-xs text-espresso/40 mt-1">Until {new Date(stylist.requested_cancellation_date).toLocaleDateString()}</p>
-                            )}
-                          </td>
-                          <td className="px-5 py-4 text-xs text-espresso/70 whitespace-nowrap">
-                            {stylist.current_period_end ? new Date(stylist.current_period_end).toLocaleDateString() : '—'}
-                          </td>
-                          <td className="px-5 py-4 text-xs text-espresso/70 whitespace-nowrap">
-                            {new Date(stylist.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <button onClick={() => handleEdit(stylist)}
-                                className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-navy hover:text-navy transition-colors whitespace-nowrap">
-                                Edit
-                              </button>
-                              {stylist.status === 'active' && (
-                                <button onClick={() => setConfirmDeactivate(stylist)}
-                                  className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-camel hover:text-camel transition-colors whitespace-nowrap">
-                                  Deactivate
-                                </button>
-                              )}
-                              {stylist.status === 'pending_agreement' && (
-                                <button onClick={() => handleResendSigningLink(stylist)} disabled={resendLinkLoading}
-                                  className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-camel hover:border-camel hover:text-camel transition-colors whitespace-nowrap">
-                                  {resendLinkLoading ? 'Sending...' : 'Resend Link'}
-                                </button>
-                              )}
-                              {stylist.status === 'deactivated' && (
-                                <button onClick={() => handleReactivate(stylist)} disabled={actionLoading}
-                                  className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-green-700 hover:text-green-700 transition-colors whitespace-nowrap">
-                                  Reactivate
-                                </button>
-                              )}
-                              <button onClick={() => setConfirmDelete(stylist)}
-                                className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-destructive hover:text-destructive transition-colors whitespace-nowrap">
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-{/* Locations Tab */}
-          {activeTab === 'locations' && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <p className="text-sm text-espresso/60">{(data?.locations || []).length} location{(data?.locations || []).length !== 1 ? 's' : ''} configured</p>
-                <button
-                  onClick={() => { setLocationForm({ name: '', address: '', maxChairs: 7 }); setShowAddLocation(true); }}
-                  className="rounded-sm bg-ink px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform hover:-translate-y-0.5"
-                >
-                  + Add Location
-                </button>
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {(data?.locations || []).map(location => {
-                  const occupancy = Math.round((location.active_stylists / location.max_chairs) * 100);
-                  return (
-                    <div key={location.id} className="rounded-md border border-border bg-card p-8">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-display text-2xl font-semibold text-navy">{location.name}</h3>
-                          <p className="mt-1 text-xs text-espresso/50">{location.address}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => { setEditingLocation(location); setLocationForm({ name: location.name, address: location.address, maxChairs: location.max_chairs }); }}
-                            className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-navy hover:text-navy transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteLocation(location)}
-                            className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-destructive hover:text-destructive transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Occupancy</span>
-                            <span className="text-sm font-medium text-espresso">{occupancy}%</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-border">
-                            <div className="h-2 rounded-full bg-camel transition-all" style={{ width: `${occupancy}%` }} />
-                          </div>
-                        </div>
-                        <div className="flex justify-between border-t border-border pt-4">
-                          <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Active</span>
-                          <span className="text-sm font-medium text-espresso">{location.active_stylists} / {location.max_chairs}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[0.7rem] uppercase tracking-[0.15em] text-espresso/50">Available</span>
-                          <span className="text-sm font-medium text-espresso">{location.max_chairs - location.active_stylists} chairs</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Revenue Tab */}
-          {activeTab === 'revenue' && (
-            <div>
-              <div className="grid gap-4 sm:grid-cols-3 mb-8">
-                <div className="rounded-md border border-border bg-card p-6">
-                  <p className={labelClass}>Monthly Subscriptions</p>
-                  <p className="font-display text-3xl font-semibold text-ink mt-1">
-                    {stylists.filter(s => s.status === 'active' && s.tier === 'monthly').length}
-                  </p>
-                  <p className="text-xs text-espresso/50 mt-1">× $1,100 = ${monthlyRevenue.toLocaleString()}</p>
-                </div>
-                <div className="rounded-md border border-border bg-card p-6">
-                  <p className={labelClass}>Weekly Subscriptions</p>
-                  <p className="font-display text-3xl font-semibold text-ink mt-1">
-                    {stylists.filter(s => s.status === 'active' && s.tier === 'weekly').length}
-                  </p>
-                  <p className="text-xs text-espresso/50 mt-1">× $300/wk = ${weeklyRevenue.toLocaleString()}/wk</p>
-                </div>
-                <div className="rounded-md border border-border bg-card p-6">
-                  <p className={labelClass}>Projected Monthly Total</p>
-                  <p className="font-display text-3xl font-semibold text-ink mt-1">${projectedMonthly.toLocaleString()}</p>
-                  <p className="text-xs text-espresso/50 mt-1">Monthly + (Weekly × 4)</p>
-                </div>
-              </div>
-              {(data?.revenue || []).length > 0 && (
-                <div className="rounded-md border border-border overflow-hidden">
-                  <div className="px-6 py-4 border-b border-border bg-card">
-                    <h3 className="font-display text-xl font-semibold text-navy">Signup History</h3>
-                  </div>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-card/50">
-                        <th className="px-6 py-3 text-left text-[0.65rem] uppercase tracking-[0.15em] text-espresso/50">Month</th>
-                        <th className="px-6 py-3 text-left text-[0.65rem] uppercase tracking-[0.15em] text-espresso/50">New Signups</th>
-                        <th className="px-6 py-3 text-left text-[0.65rem] uppercase tracking-[0.15em] text-espresso/50">Est. Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(data?.revenue || []).map((row, i) => (
-                        <tr key={i} className={`border-b border-border ${i % 2 === 0 ? 'bg-background' : 'bg-card'}`}>
-                          <td className="px-6 py-4 text-espresso">{row.month}</td>
-                          <td className="px-6 py-4 text-espresso/70">{row.new_signups}</td>
-                          <td className="px-6 py-4 font-medium text-espresso">${parseInt(row.estimated_revenue).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Renewals Tab */}
-          {activeTab === 'renewals' && (
-            <div>
-              <p className="text-sm text-espresso/60 mb-6">Subscriptions renewing in the next 14 days.</p>
-              {(data?.upcomingRenewals || []).length === 0 ? (
-                <div className="rounded-md border border-border bg-card p-10 text-center">
-                  <p className="text-espresso/40 italic text-sm">No renewals in the next 14 days.</p>
-                </div>
-              ) : (
-                <div className="rounded-md border border-border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-card">
-                        {['Stylist', 'Location', 'Plan', 'Renewal Date', 'Days Away'].map(h => (
-                          <th key={h} className="px-5 py-4 text-left text-[0.65rem] uppercase tracking-[0.15em] text-espresso/50 font-medium">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(data?.upcomingRenewals || []).map((renewal, i) => {
-                        const daysAway = Math.ceil((new Date(renewal.current_period_end) - new Date()) / (1000 * 60 * 60 * 24));
-                        return (
-                          <tr key={i} className={`border-b border-border ${i % 2 === 0 ? 'bg-background' : 'bg-card'}`}>
-                            <td className="px-5 py-4">
-                              <p className="font-medium text-espresso">{renewal.name}</p>
-                              <p className="text-xs text-espresso/50">{renewal.email}</p>
-                            </td>
-                            <td className="px-5 py-4 text-sm text-espresso/70">{renewal.location_name}</td>
-                            <td className="px-5 py-4">
-                              <span className="inline-block rounded-sm border border-camel/40 px-2 py-1 text-[0.65rem] uppercase tracking-[0.1em] text-camel">
-                                {renewal.tier === 'weekly' ? '$300/wk' : renewal.tier === 'monthly' ? '$1,100/mo' : '$1/test'}
-                              </span>
-                            </td>
-                            <td className="px-5 py-4 text-sm text-espresso/70">
-                              {new Date(renewal.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                            </td>
-                            <td className="px-5 py-4">
-                              <span className={`text-sm font-medium ${daysAway <= 3 ? 'text-destructive' : 'text-espresso/70'}`}>
-                                {daysAway} day{daysAway !== 1 ? 's' : ''}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Invites Tab */}
-          {activeTab === 'invites' && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <p className="text-sm text-espresso/60">Pending and past stylist invitations.</p>
-                <button onClick={() => setShowInviteModal(true)}
-                  className="rounded-sm bg-ink px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.22em] text-primary-foreground transition-transform hover:-translate-y-0.5">
-                  + Invite Stylist
-                </button>
-              </div>
-              {invites.length === 0 ? (
-                <div className="rounded-md border border-border bg-card p-10 text-center">
-                  <p className="text-espresso/40 italic text-sm">No invites sent yet.</p>
-                </div>
-              ) : (
-                <div className="rounded-md border border-border overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-card">
-                        {['Email', 'Location', 'Sent', 'Expires', 'Status', 'Actions'].map(h => (
-                          <th key={h} className="px-5 py-4 text-left text-[0.65rem] uppercase tracking-[0.15em] text-espresso/50 font-medium whitespace-nowrap">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invites.map((invite, i) => {
-                        const isExpired = new Date(invite.expires_at) < new Date();
-                        const status = invite.used ? 'Signed Up' : isExpired ? 'Expired' : 'Pending';
-                        return (
-                          <tr key={invite.id} className={`border-b border-border ${i % 2 === 0 ? 'bg-background' : 'bg-card'}`}>
-                            <td className="px-5 py-4 font-medium text-espresso">{invite.email}</td>
-                            <td className="px-5 py-4 text-sm text-espresso/70">{invite.location_name}</td>
-                            <td className="px-5 py-4 text-xs text-espresso/70">{new Date(invite.created_at).toLocaleDateString()}</td>
-                            <td className="px-5 py-4 text-xs text-espresso/70">{new Date(invite.expires_at).toLocaleDateString()}</td>
-                            <td className="px-5 py-4">
-                              <span className={`inline-block rounded-sm px-2 py-1 text-[0.65rem] uppercase tracking-[0.1em] ${
-                                invite.used ? 'bg-green-50 text-green-700' :
-                                isExpired ? 'bg-destructive/10 text-destructive' :
-                                'bg-camel/10 text-camel'
-                              }`}>{status}</span>
-                            </td>
-                            <td className="px-5 py-4">
-                              <div className="flex gap-2">
-                                {!invite.used && (
-                                  <button onClick={async () => {
-                                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}/resend`, {
-                                      method: 'POST', headers: { 'x-admin-token': token }
-                                    });
-                                    if (response.ok) { showSuccess('Invite resent!'); await fetchData(); }
-                                    else alert('Failed to resend invite');
-                                  }} className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-navy hover:text-navy transition-colors whitespace-nowrap">
-                                    Resend
-                                  </button>
-                                )}
-                                <button onClick={async () => {
-                                  if (!confirm(`Delete this invite?`)) return;
-                                  const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}`, {
-                                    method: 'DELETE', headers: { 'x-admin-token': token }
-                                  });
-                                  if (response.ok) { showSuccess('Invite deleted.'); await fetchData(); }
-                                  else alert('Failed to delete invite');
-                                }} className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-destructive hover:text-destructive transition-colors whitespace-nowrap">
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Notes */}
-          <div className="mt-10 rounded-md border border-camel/30 bg-card px-6 py-5">
-            <p className="text-[0.7rem] uppercase tracking-[0.2em] text-camel mb-2">Admin Notes</p>
-            <ul className="space-y-1.5 text-xs text-espresso/60 leading-relaxed">
-              <li>— <strong>Deactivate</strong> stops billing immediately but retains the record for future rentals.</li>
-              <li>— <strong>Delete</strong> permanently removes the record and stops billing immediately.</li>
-              <li>— <strong>Reactivate</strong> creates a new Stripe subscription for a deactivated stylist.</li>
-              <li>— 30 days written notice is required per rental agreement before cancellation takes effect.</li>
-            </ul>
-          </div>
+      <div className="mx-auto max-w-7xl px-6 py-12">
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="font-display text-4xl font-semibold text-navy">Admin Dashboard</h1>
+          <button onClick={() => setShowEmailForm(!showEmailForm)} className="text-xs font-semibold uppercase tracking-widest text-navy hover:text-hunter transition-colors">Request New Link</button>
         </div>
-      </div>
 
-      {/* Edit Modal */}
-      {editingStylest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4 overflow-y-auto py-8">
-          <div className="w-full max-w-lg rounded-md border border-border bg-background p-8 shadow-xl">
-            <h2 className="font-display text-2xl font-semibold text-navy mb-6">Edit Stylist</h2>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              {[
-                { label: 'Full Name', key: 'name', type: 'text' },
-                { label: 'Email', key: 'email', type: 'email' },
-                { label: 'Phone', key: 'phone', type: 'tel' },
-                { label: 'License Number', key: 'licenseNumber', type: 'text' },
-              ].map(field => (
-                <div key={field.key}>
-                  <label className={labelClass}>{field.label}</label>
-                  <input type={field.type} value={editForm[field.key] || ''} onChange={(e) => setEditForm({...editForm, [field.key]: e.target.value})} required className={inputClass} />
+        {successMessage && (
+          <div className="mb-6 rounded-sm border border-green-200 bg-green-50 px-4 py-3">
+            <p className="text-sm text-green-800">{successMessage}</p>
+          </div>
+        )}
+
+        {/* Tab Navigation */}
+        <div className="mb-8 border-b border-border flex gap-8">
+          {['stylists', 'locations', 'invites', 'bios'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`pb-3 text-xs font-semibold uppercase tracking-widest transition-colors ${
+                activeTab === tab ? 'border-b-2 border-navy text-navy' : 'text-espresso/60 hover:text-navy'
+              }`}
+            >
+              {tab === 'stylists' && 'Stylists'}
+              {tab === 'locations' && 'Locations'}
+              {tab === 'invites' && 'Invites'}
+              {tab === 'bios' && 'Meet the Team'}
+            </button>
+          ))}
+        </div>
+
+        {/* STYLISTS TAB */}
+        {activeTab === 'stylists' && (
+          <div>
+            <div className="mb-6 flex gap-4">
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={inputClass + ' max-w-xs'}>
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending Agreement</option>
+                <option value="signed">Agreement Signed</option>
+              </select>
+              <select value={filterLocation} onChange={(e) => setFilterLocation(e.target.value)} className={inputClass + ' max-w-xs'}>
+                <option value="all">All Locations</option>
+                {locations.map(l => (<option key={l.id} value={l.id}>{l.name}</option>))}
+              </select>
+            </div>
+
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-card">
+                  <tr>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Name</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Email</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Location</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Tier</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Status</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStylists.map(s => (
+                    <tr key={s.id} className="border-b border-border hover:bg-card/50 transition-colors">
+                      <td className="px-6 py-4 text-espresso">{s.name}</td>
+                      <td className="px-6 py-4 text-espresso/70">{s.email}</td>
+                      <td className="px-6 py-4 text-espresso/70">{s.location_name || '—'}</td>
+                      <td className="px-6 py-4 capitalize text-espresso">{s.tier}</td>
+                      <td className="px-6 py-4">
+                        <span className={`text-xs font-semibold uppercase tracking-widest px-2 py-1 rounded-sm ${
+                          s.agreement_status === 'signed' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {s.agreement_status === 'signed' ? 'Active' : 'Pending Agreement'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 space-x-2">
+                        <button onClick={() => handleEdit(s)} className="text-xs font-semibold text-navy hover:text-hunter transition-colors">Edit</button>
+                        {s.agreement_status !== 'signed' && (
+                          <button onClick={() => setResendingLink(s)} className="text-xs font-semibold text-navy hover:text-hunter transition-colors">Resend Link</button>
+                        )}
+                        <button onClick={() => setConfirmDeactivate(s)} className="text-xs font-semibold text-destructive hover:text-red-700 transition-colors">Deactivate</button>
+                        <button onClick={() => setConfirmDelete(s)} className="text-xs font-semibold text-destructive hover:text-red-700 transition-colors">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* LOCATIONS TAB */}
+        {activeTab === 'locations' && (
+          <div>
+            <button onClick={() => { setShowAddLocation(true); setLocationForm({ name: '', address: '', maxChairs: 7 }); }}
+              className="mb-6 rounded-sm bg-ink px-4 py-3 text-xs font-semibold uppercase tracking-widest text-white hover:bg-navy transition-colors">
+              + Add Location
+            </button>
+            <div className="grid gap-4">
+              {locations.map(l => (
+                <div key={l.id} className="rounded-md border border-border bg-card p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-display text-xl font-semibold text-navy">{l.name}</h3>
+                      <p className="text-sm text-espresso/70 mt-1">{l.address}</p>
+                      <p className="text-sm text-espresso/70 mt-2">{l.active_stylists}/{l.max_chairs} chairs occupied</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setEditingLocation(l); setLocationForm({ name: l.name, address: l.address, maxChairs: l.max_chairs }); }}
+                        className="text-xs font-semibold text-navy hover:text-hunter transition-colors">Edit</button>
+                      <button onClick={() => setConfirmDeleteLocation(l)} className="text-xs font-semibold text-destructive hover:text-red-700 transition-colors">Delete</button>
+                    </div>
+                  </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* INVITES TAB */}
+        {activeTab === 'invites' && (
+          <div>
+            <button onClick={() => setShowInviteModal(true)} className="mb-6 rounded-sm bg-ink px-4 py-3 text-xs font-semibold uppercase tracking-widest text-white hover:bg-navy transition-colors">
+              + Send Invite
+            </button>
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-card">
+                  <tr>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Email</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Location</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Status</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Sent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invites.map(i => (
+                    <tr key={i.id} className="border-b border-border hover:bg-card/50 transition-colors">
+                      <td className="px-6 py-4 text-espresso">{i.email}</td>
+                      <td className="px-6 py-4 text-espresso/70">{i.location_name || '—'}</td>
+                      <td className="px-6 py-4"><span className={`text-xs font-semibold uppercase tracking-widest px-2 py-1 rounded-sm ${i.used ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>{i.used ? 'Accepted' : 'Pending'}</span></td>
+                      <td className="px-6 py-4 text-espresso/70 text-xs">{new Date(i.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* MEET THE TEAM / BIOS TAB */}
+        {activeTab === 'bios' && (
+          <div>
+            <p className="text-sm text-espresso/70 mb-6">Manage stylist bios and decide which stylists appear on your "Meet the Team" page.</p>
+            <div className="grid gap-4">
+              {stylists.map(s => (
+                <div key={s.id} className="rounded-md border border-border bg-card p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-display text-xl font-semibold text-navy">{s.name}</h3>
+                      <div className="mt-4 space-y-1 text-sm text-espresso/70">
+                        <p><strong>Email:</strong> {s.email}</p>
+                        <p><strong>Headshot:</strong> {s.headshot_url ? '✓ Uploaded' : '—'}</p>
+                        <p><strong>Bio:</strong> {s.introduction ? '✓ Added' : '—'}</p>
+                        <p><strong>GlossGenius Link:</strong> {s.glossgenius_link ? '✓ Set' : '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => handleEditBio(s)}
+                        className="rounded-sm bg-ink px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-navy transition-colors"
+                      >
+                        Edit Bio
+                      </button>
+                      <button
+                        onClick={() => handleTogglePublish(s)}
+                        className={`rounded-sm px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-colors ${
+                          s.is_published
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'border border-border text-espresso/60 hover:border-navy'
+                        }`}
+                      >
+                        {s.is_published ? '✓ Published' : 'Unpublished'}
+                      </button>
+                      {s.is_published && (
+                        <a
+                          href={`/meet-the-team/${s.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-semibold text-navy hover:text-hunter transition-colors text-center"
+                        >
+                          View Page →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Stylist Modal */}
+      {editingStylest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
+            <h2 className="font-display text-2xl font-semibold text-navy mb-6">Edit Stylist</h2>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className={labelClass}>Billing Plan</label>
-                <select value={editForm.tier || ''} onChange={(e) => setEditForm({...editForm, tier: e.target.value})} className={inputClass}>
-                  <option value="weekly">Weekly — $300/week</option>
-                  <option value="monthly">Monthly — $1,100/month</option>
+                <label className={labelClass}>Name *</label>
+                <input type="text" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} required className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Email *</label>
+                <input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} required className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Phone</label>
+                <input type="tel" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>License Number</label>
+                <input type="text" value={editForm.licenseNumber} onChange={(e) => setEditForm({...editForm, licenseNumber: e.target.value})} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Tier</label>
+                <select value={editForm.tier} onChange={(e) => setEditForm({...editForm, tier: e.target.value})} className={inputClass}>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="test">Test</option>
                 </select>
               </div>
               <div>
                 <label className={labelClass}>Location</label>
                 <select value={editForm.locationId} onChange={(e) => setEditForm({...editForm, locationId: parseInt(e.target.value)})} className={inputClass}>
-                  {(data?.locations || []).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  {locations.map(l => (<option key={l.id} value={l.id}>{l.name}</option>))}
                 </select>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditingStylest(null)}
-                  className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">
+                <button type="button" onClick={() => setEditingStylest(null)} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">Cancel</button>
+                <button type="submit" disabled={editLoading} className="flex-1 rounded-sm bg-ink py-3 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40">{editLoading ? 'Saving...' : 'Save'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Bio Modal */}
+      {editingBio && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-2xl rounded-md border border-border bg-background p-8 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="font-display text-2xl font-semibold text-navy mb-2">{editingBio.name} — Bio</h2>
+            <p className="text-sm text-espresso/70 mb-6">This information will appear on the "Meet the Team" page when published.</p>
+            <form onSubmit={handleBioSubmit} className="space-y-4">
+              {/* Headshot Upload */}
+              <div>
+                <label className={labelClass}>Headshot Photo</label>
+                {bioForm.headshotUrl && (
+                  <div className="mb-3 relative">
+                    <img src={bioForm.headshotUrl} alt="Headshot preview" className="h-40 w-40 rounded-md object-cover border border-border" />
+                    <button
+                      type="button"
+                      onClick={() => setBioForm({ ...bioForm, headshotUrl: '' })}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleHeadshotUpload}
+                  disabled={uploadingImage}
+                  className="block text-sm text-espresso/70 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border file:border-border file:text-xs file:font-semibold file:bg-card file:text-navy hover:file:bg-card/80 cursor-pointer"
+                />
+                <p className="text-xs text-espresso/60 mt-2">Recommended: 400x500px, square aspect ratio</p>
+              </div>
+
+              {/* Introduction */}
+              <div>
+                <label className={labelClass}>Introduction *</label>
+                <p className="text-xs text-espresso/60 mb-2">A brief paragraph about this stylist (shown in the card grid)</p>
+                <textarea
+                  value={bioForm.introduction}
+                  onChange={(e) => setBioForm({...bioForm, introduction: e.target.value})}
+                  required
+                  rows="3"
+                  placeholder="Hello! I'm passionate about creating beautiful hair..."
+                  className={inputClass}
+                />
+              </div>
+
+              {/* Experience */}
+              <div>
+                <label className={labelClass}>Experience</label>
+                <p className="text-xs text-espresso/60 mb-2">Years in the industry, specialties, certifications, etc.</p>
+                <textarea
+                  value={bioForm.experience}
+                  onChange={(e) => setBioForm({...bioForm, experience: e.target.value})}
+                  rows="3"
+                  placeholder="10+ years of experience in hair color, specializing in balayage and lived-in blonde..."
+                  className={inputClass}
+                />
+              </div>
+
+              {/* Services Offered */}
+              <div>
+                <label className={labelClass}>Services Offered</label>
+                <p className="text-xs text-espresso/60 mb-2">Services this stylist provides</p>
+                <textarea
+                  value={bioForm.servicesOffered}
+                  onChange={(e) => setBioForm({...bioForm, servicesOffered: e.target.value})}
+                  rows="3"
+                  placeholder="Cuts, Color, Balayage, Keratin treatments, Styling..."
+                  className={inputClass}
+                />
+              </div>
+
+              {/* GlossGenius Link */}
+              <div>
+                <label className={labelClass}>GlossGenius Booking Link *</label>
+                <p className="text-xs text-espresso/60 mb-2">Unique link for this stylist's booking page</p>
+                <input
+                  type="url"
+                  value={bioForm.glossgeniusLink}
+                  onChange={(e) => setBioForm({...bioForm, glossgeniusLink: e.target.value})}
+                  required
+                  placeholder="https://glossgenius.com/book/..."
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="rounded-sm border border-camel/30 bg-card px-4 py-3">
+                <p className="text-xs text-espresso/60 leading-relaxed">
+                  Once you save these changes, toggle "Published" on the main list to make this stylist appear on your public "Meet the Team" page.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingBio(null)}
+                  className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors"
+                >
                   Cancel
                 </button>
-                <button type="submit" disabled={editLoading}
-                  className="flex-1 rounded-sm bg-ink py-3 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40">
-                  {editLoading ? 'Saving…' : 'Save Changes'}
+                <button
+                  type="submit"
+                  disabled={bioLoading || !bioForm.introduction || !bioForm.glossgeniusLink}
+                  className="flex-1 rounded-sm bg-ink py-3 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40"
+                >
+                  {bioLoading ? 'Saving...' : 'Save Bio'}
                 </button>
               </div>
             </form>
@@ -683,51 +628,67 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Deactivate Modal */}
-      {confirmDeactivate && (
+      {/* Resend Signing Link Modal */}
+      {resendingLink && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
-            <h2 className="font-display text-2xl font-semibold text-navy mb-3">Deactivate Stylist</h2>
-            <p className="text-sm text-espresso/70 mb-2">You are about to deactivate <strong>{confirmDeactivate.name}</strong>.</p>
-            <ul className="text-sm text-espresso/60 space-y-1 mb-6 list-disc list-inside">
-              <li>Billing will stop immediately</li>
-              <li>Record will be retained in the system</li>
-              <li>Can be reactivated at any time</li>
-            </ul>
+            <h2 className="font-display text-2xl font-semibold text-navy mb-3">Resend Signing Link</h2>
+            <p className="text-sm text-espresso/70 mb-6">
+              Send a new agreement signing link to <strong>{resendingLink.name}</strong>?
+            </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDeactivate(null)}
-                className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">
+              <button onClick={() => setResendingLink(null)} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">
                 Cancel
               </button>
-              <button onClick={() => handleDeactivate(confirmDeactivate)} disabled={actionLoading}
-                className="flex-1 rounded-sm bg-camel py-3 text-[0.74rem] uppercase tracking-[0.22em] text-white disabled:opacity-40">
-                {actionLoading ? 'Processing…' : 'Deactivate'}
+              <button
+                onClick={() => handleResendSigningLink(resendingLink)}
+                disabled={resendLinkLoading}
+                className="flex-1 rounded-sm bg-ink py-3 text-[0.74rem] uppercase tracking-[0.22em] text-primary-foreground disabled:opacity-40"
+              >
+                {resendLinkLoading ? 'Sending...' : 'Resend'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Modal */}
+      {/* Deactivate Stylist Modal */}
+      {confirmDeactivate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
+            <h2 className="font-display text-2xl font-semibold text-destructive mb-3">Deactivate Stylist</h2>
+            <p className="text-sm text-espresso/70 mb-2">You are about to deactivate <strong>{confirmDeactivate.name}</strong>.</p>
+            <ul className="text-sm text-espresso/60 space-y-1 mb-6 list-disc list-inside">
+              <li>Their subscription will be canceled immediately</li>
+              <li>All billing will stop</li>
+              <li>Their account will remain in the system</li>
+            </ul>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDeactivate(null)} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">Cancel</button>
+              <button onClick={() => handleDeactivate(confirmDeactivate)} disabled={actionLoading} className="flex-1 rounded-sm bg-destructive py-3 text-[0.74rem] uppercase tracking-[0.22em] text-white disabled:opacity-40">
+                {actionLoading ? 'Deactivating...' : 'Deactivate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Stylist Modal */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
             <h2 className="font-display text-2xl font-semibold text-destructive mb-3">Delete Stylist</h2>
-            <p className="text-sm text-espresso/70 mb-2">You are about to permanently delete <strong>{confirmDelete.name}</strong>.</p>
-            <ul className="text-sm text-espresso/60 space-y-1 mb-3 list-disc list-inside">
-              <li>Billing stops immediately</li>
-              <li>All records permanently removed</li>
+            <p className="text-sm text-espresso/70 mb-2">You are about to delete <strong>{confirmDelete.name}</strong>.</p>
+            <ul className="text-sm text-espresso/60 space-y-1 mb-6 list-disc list-inside">
               <li>This cannot be undone</li>
+              <li>All stylist data will be permanently removed</li>
+              <li>Subscription will be canceled</li>
             </ul>
             <p className="text-sm font-medium text-destructive mb-6">Are you absolutely sure?</p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(null)}
-                className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">
-                Cancel
-              </button>
-              <button onClick={() => handleDelete(confirmDelete)} disabled={actionLoading}
-                className="flex-1 rounded-sm bg-destructive py-3 text-[0.74rem] uppercase tracking-[0.22em] text-white disabled:opacity-40">
-                {actionLoading ? 'Deleting…' : 'Yes, Delete'}
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">Cancel</button>
+              <button onClick={() => handleDelete(confirmDelete)} disabled={actionLoading} className="flex-1 rounded-sm bg-destructive py-3 text-[0.74rem] uppercase tracking-[0.22em] text-white disabled:opacity-40">
+                {actionLoading ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
           </div>
@@ -749,17 +710,17 @@ export function AdminDashboardPage() {
                   body: JSON.stringify(locationForm),
                 });
                 if (response.ok) { setShowAddLocation(false); showSuccess('Location added.'); await fetchData(); }
-                else { const d = await response.json(); alert(d.error || 'Failed to add location'); }
+                else { const d = await response.json(); alert(d.error || 'Failed to add'); }
               } catch (err) { alert('Error adding location'); }
               setLocationLoading(false);
             }} className="space-y-4">
               <div>
-                <label className={labelClass}>Location Name</label>
-                <input type="text" value={locationForm.name} onChange={(e) => setLocationForm({...locationForm, name: e.target.value})} required placeholder="e.g. Clayton" className={inputClass} />
+                <label className={labelClass}>Location Name *</label>
+                <input type="text" value={locationForm.name} onChange={(e) => setLocationForm({...locationForm, name: e.target.value})} required className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>Address</label>
-                <input type="text" value={locationForm.address} onChange={(e) => setLocationForm({...locationForm, address: e.target.value})} placeholder="e.g. 123 Main St, St. Louis, MO" className={inputClass} />
+                <input type="text" value={locationForm.address} onChange={(e) => setLocationForm({...locationForm, address: e.target.value})} className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>Maximum Chairs</label>
@@ -845,7 +806,6 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-
       {/* Invite Stylist Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
@@ -885,7 +845,7 @@ export function AdminDashboardPage() {
                 <select value={inviteForm.locationId} onChange={(e) => setInviteForm({...inviteForm, locationId: e.target.value})}
                   required className={inputClass}>
                   <option value="">Select a location</option>
-                  {(data?.locations || []).map(l => (
+                  {locations.map(l => (
                     <option key={l.id} value={l.id}>{l.name} ({l.max_chairs - l.active_stylists} chairs available)</option>
                   ))}
                 </select>
