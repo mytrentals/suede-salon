@@ -62,8 +62,14 @@ export function AdminDashboardPage() {
   const fetchData = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/subscriptions/${token}`);
-      if (!response.ok) { setError('Invalid or expired admin link'); setLoading(false); return; }
+      if (!response.ok) { 
+        console.error('Admin subscriptions response not ok:', response.status);
+        setError('Invalid or expired admin link'); 
+        setLoading(false); 
+        return; 
+      }
       const result = await response.json();
+      console.log('Admin data loaded:', result);
       
       // Fetch locations
       const locResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/locations`);
@@ -84,7 +90,10 @@ export function AdminDashboardPage() {
         const inviteData = await inviteRes.json();
         setInvites(inviteData.invites || []);
       }
-    } catch (err) { setError('Failed to load admin data'); }
+    } catch (err) { 
+      console.error('Error loading admin data:', err);
+      setError('Failed to load admin data'); 
+    }
     setLoading(false);
   };
 
@@ -178,6 +187,7 @@ export function AdminDashboardPage() {
     e.preventDefault();
     setBioLoading(true);
     try {
+      console.log('Submitting bio update for stylist:', editingBio.id, bioForm);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stylists/${editingBio.id}/bio`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
@@ -190,16 +200,21 @@ export function AdminDashboardPage() {
           headshotUrl: bioForm.headshotUrl,
         }),
       });
+      console.log('Bio update response status:', response.status);
       if (response.ok) {
+        const result = await response.json();
+        console.log('Bio update successful:', result);
         setEditingBio(null);
         showSuccess('Bio updated successfully.');
         await fetchData();
       } else {
         const d = await response.json();
+        console.error('Bio update failed:', d);
         alert(d.error || 'Failed to update bio');
       }
     } catch (err) {
-      alert('Error updating bio');
+      console.error('Error updating bio:', err);
+      alert('Error updating bio: ' + err.message);
     }
     setBioLoading(false);
   };
@@ -431,7 +446,16 @@ export function AdminDashboardPage() {
           <div>
             <p className="text-sm text-espresso/70 mb-6">Manage stylist bios and decide which stylists appear on your "Meet the Team" page.</p>
             <div className="grid gap-4">
-              {stylists.map(s => (
+              {stylists.map(s => {
+                console.log('Rendering stylist:', s.name, {
+                  introduction: s.introduction,
+                  experience: s.experience,
+                  services: s.services_offered,
+                  instagram: s.instagram_handle,
+                  glossgenius: s.glossgenius_link,
+                  headshot: s.headshot_url,
+                });
+                return (
                 <div key={s.id} className="rounded-md border border-border bg-card p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
