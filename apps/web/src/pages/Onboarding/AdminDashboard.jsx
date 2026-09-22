@@ -39,6 +39,7 @@ export function AdminDashboardPage() {
     experience: '',
     servicesOffered: '',
     glossgeniusLink: '',
+    instagramHandle: '',
     headshotUrl: '',
   });
   const [bioLoading, setBioLoading] = useState(false);
@@ -148,6 +149,7 @@ export function AdminDashboardPage() {
       experience: stylist.experience || '',
       servicesOffered: stylist.services_offered || '',
       glossgeniusLink: stylist.glossgenius_link || '',
+      instagramHandle: stylist.instagram_handle || '',
       headshotUrl: stylist.headshot_url || '',
     });
   };
@@ -179,7 +181,14 @@ export function AdminDashboardPage() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stylists/${editingBio.id}/bio`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify(bioForm),
+        body: JSON.stringify({
+          introduction: bioForm.introduction,
+          experience: bioForm.experience,
+          servicesOffered: bioForm.servicesOffered,
+          glossgeniusLink: bioForm.glossgeniusLink,
+          instagramHandle: bioForm.instagramHandle,
+          headshotUrl: bioForm.headshotUrl,
+        }),
       });
       if (response.ok) {
         setEditingBio(null);
@@ -427,10 +436,13 @@ export function AdminDashboardPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="font-display text-xl font-semibold text-navy">{s.name}</h3>
-                      <div className="mt-4 space-y-1 text-sm text-espresso/70">
+                      <div className="mt-4 space-y-2 text-sm text-espresso/70">
                         <p><strong>Email:</strong> {s.email}</p>
                         <p><strong>Headshot:</strong> {s.headshot_url ? '✓ Uploaded' : '—'}</p>
-                        <p><strong>Bio:</strong> {s.introduction ? '✓ Added' : '—'}</p>
+                        <p><strong>Introduction:</strong> {s.introduction ? `"${s.introduction.substring(0, 60)}${s.introduction.length > 60 ? '...' : ''}"` : '—'}</p>
+                        <p><strong>Experience:</strong> {s.experience ? '✓ Added' : '—'}</p>
+                        <p><strong>Services:</strong> {s.services_offered ? '✓ Added' : '—'}</p>
+                        <p><strong>Instagram:</strong> {s.instagram_handle ? `@${s.instagram_handle}` : '—'}</p>
                         <p><strong>GlossGenius Link:</strong> {s.glossgenius_link ? '✓ Set' : '—'}</p>
                       </div>
                     </div>
@@ -449,7 +461,7 @@ export function AdminDashboardPage() {
                             : 'border border-border text-espresso/60 hover:border-navy'
                         }`}
                       >
-                        {s.is_published ? '✓ Published' : 'Unpublished'}
+                        {s.is_published ? '✓ Published' : 'Publish'}
                       </button>
                       {s.is_published && (
                         <a
@@ -597,6 +609,19 @@ export function AdminDashboardPage() {
                   onChange={(e) => setBioForm({...bioForm, glossgeniusLink: e.target.value})}
                   required
                   placeholder="https://glossgenius.com/book/..."
+                  className={inputClass}
+                />
+              </div>
+
+              {/* Instagram Handle */}
+              <div>
+                <label className={labelClass}>Instagram Handle</label>
+                <p className="text-xs text-espresso/60 mb-2">Optional: @username (without the @)</p>
+                <input
+                  type="text"
+                  value={bioForm.instagramHandle}
+                  onChange={(e) => setBioForm({...bioForm, instagramHandle: e.target.value})}
+                  placeholder="stylername"
                   className={inputClass}
                 />
               </div>
