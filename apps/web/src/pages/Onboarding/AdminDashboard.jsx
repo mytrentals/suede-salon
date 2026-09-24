@@ -39,6 +39,7 @@ export function AdminDashboardPage() {
     experience: '',
     servicesOffered: '',
     glossgeniusLink: '',
+    instagramHandle: '',
     headshotUrl: '',
   });
   const [bioLoading, setBioLoading] = useState(false);
@@ -148,6 +149,7 @@ export function AdminDashboardPage() {
       experience: stylist.experience || '',
       servicesOffered: stylist.services_offered || '',
       glossgeniusLink: stylist.glossgenius_link || '',
+      instagramHandle: stylist.instagram_handle || '',
       headshotUrl: stylist.headshot_url || '',
     });
   };
@@ -179,7 +181,14 @@ export function AdminDashboardPage() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stylists/${editingBio.id}/bio`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-        body: JSON.stringify(bioForm),
+        body: JSON.stringify({
+          introduction: bioForm.introduction,
+          experience: bioForm.experience,
+          servicesOffered: bioForm.servicesOffered,
+          glossgeniusLink: bioForm.glossgeniusLink,
+          instagramHandle: bioForm.instagramHandle,
+          headshotUrl: bioForm.headshotUrl,
+        }),
       });
       if (response.ok) {
         setEditingBio(null);
@@ -515,10 +524,16 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Edit Bio Modal */}
+      {/* Edit Bio Modal - WITH CLICK-TO-CLOSE */}
       {editingBio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-2xl rounded-md border border-border bg-background p-8 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4"
+          onClick={() => setEditingBio(null)}
+        >
+          <div 
+            className="w-full max-w-2xl rounded-md border border-border bg-background p-8 shadow-xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="font-display text-2xl font-semibold text-navy mb-2">{editingBio.name} — Bio</h2>
             <p className="text-sm text-espresso/70 mb-6">This information will appear on the "Meet the Team" page when published.</p>
             <form onSubmit={handleBioSubmit} className="space-y-4">
@@ -601,6 +616,19 @@ export function AdminDashboardPage() {
                 />
               </div>
 
+              {/* Instagram Handle */}
+              <div>
+                <label className={labelClass}>Instagram Handle</label>
+                <p className="text-xs text-espresso/60 mb-2">Optional: username (without the @)</p>
+                <input
+                  type="text"
+                  value={bioForm.instagramHandle}
+                  onChange={(e) => setBioForm({...bioForm, instagramHandle: e.target.value})}
+                  placeholder="stylername"
+                  className={inputClass}
+                />
+              </div>
+
               <div className="rounded-sm border border-camel/30 bg-card px-4 py-3">
                 <p className="text-xs text-espresso/60 leading-relaxed">
                   Once you save these changes, toggle "Published" on the main list to make this stylist appear on your public "Meet the Team" page.
@@ -628,6 +656,7 @@ export function AdminDashboardPage() {
         </div>
       )}
 
+      {/* Other Modals... (resend, locations, invites) */}
       {/* Resend Signing Link Modal */}
       {resendingLink && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
@@ -652,37 +681,36 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Deactivate Stylist Modal */}
+      {/* Deactivate Modal */}
       {confirmDeactivate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
             <h2 className="font-display text-2xl font-semibold text-destructive mb-3">Deactivate Stylist</h2>
             <p className="text-sm text-espresso/70 mb-2">You are about to deactivate <strong>{confirmDeactivate.name}</strong>.</p>
-            <ul className="text-sm text-espresso/60 space-y-1 mb-6 list-disc list-inside">
-              <li>Their subscription will be canceled immediately</li>
-              <li>All billing will stop</li>
-              <li>Their account will remain in the system</li>
+            <ul className="text-sm text-espresso/60 space-y-1 mb-3 list-disc list-inside">
+              <li>Their subscription will be cancelled</li>
+              <li>They will no longer be charged</li>
             </ul>
+            <p className="text-sm font-medium text-destructive mb-6">Continue?</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDeactivate(null)} className="flex-1 rounded-sm border border-border py-3 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 hover:border-navy transition-colors">Cancel</button>
               <button onClick={() => handleDeactivate(confirmDeactivate)} disabled={actionLoading} className="flex-1 rounded-sm bg-destructive py-3 text-[0.74rem] uppercase tracking-[0.22em] text-white disabled:opacity-40">
-                {actionLoading ? 'Deactivating...' : 'Deactivate'}
+                {actionLoading ? 'Deactivating...' : 'Yes, Deactivate'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Stylist Modal */}
+      {/* Delete Modal */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
             <h2 className="font-display text-2xl font-semibold text-destructive mb-3">Delete Stylist</h2>
             <p className="text-sm text-espresso/70 mb-2">You are about to delete <strong>{confirmDelete.name}</strong>.</p>
-            <ul className="text-sm text-espresso/60 space-y-1 mb-6 list-disc list-inside">
+            <ul className="text-sm text-espresso/60 space-y-1 mb-3 list-disc list-inside">
               <li>This cannot be undone</li>
-              <li>All stylist data will be permanently removed</li>
-              <li>Subscription will be canceled</li>
+              <li>Their subscription will be cancelled</li>
             </ul>
             <p className="text-sm font-medium text-destructive mb-6">Are you absolutely sure?</p>
             <div className="flex gap-3">
@@ -715,7 +743,7 @@ export function AdminDashboardPage() {
               setLocationLoading(false);
             }} className="space-y-4">
               <div>
-                <label className={labelClass}>Location Name *</label>
+                <label className={labelClass}>Location Name</label>
                 <input type="text" value={locationForm.name} onChange={(e) => setLocationForm({...locationForm, name: e.target.value})} required className={inputClass} />
               </div>
               <div>
