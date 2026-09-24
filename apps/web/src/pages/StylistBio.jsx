@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { SiteLayout } from '@/components/SiteLayout';
+import SiteLayout from '@/components/SiteLayout';
 
 export function StylistBioPage() {
   const [stylist, setStylist] = useState(null);

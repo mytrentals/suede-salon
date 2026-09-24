@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SiteLayout } from '@/components/SiteLayout';
+import SiteLayout from '@/components/SiteLayout';
 
 export function AdminDashboardPage() {
   const [token, setToken] = useState('');
