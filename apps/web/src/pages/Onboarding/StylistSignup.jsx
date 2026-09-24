@@ -6,6 +6,36 @@ import SiteLayout from '@/components/SiteLayout';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
+// Salon runs on Central time — "today" and "tomorrow" are calculated there,
+// not in UTC or the stylist's browser timezone.
+const SALON_TIMEZONE = 'America/Chicago';
+
+// Returns tomorrow's date in Central time as 'YYYY-MM-DD' (the format <input type="date"> uses)
+function getEarliestStartDate() {
+  const todayCentral = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SALON_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date()); // en-CA formats as YYYY-MM-DD
+  const [y, m, d] = todayCentral.split('-').map(Number);
+  const tomorrow = new Date(Date.UTC(y, m - 1, d + 1));
+  return tomorrow.toISOString().slice(0, 10);
+}
+
+// Formats a start date for display without shifting it a day.
+// A bare 'YYYY-MM-DD' string is parsed by JS as UTC midnight, which displays
+// as the previous day in Central — so date-only strings are built locally.
+function formatStartDate(value) {
+  if (!value) return '';
+  const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', opts);
+  }
+  return new Date(value).toLocaleDateString('en-US', { ...opts, timeZone: SALON_TIMEZONE });
+}
+
 export function StylistSignupPage() {
   const [step, setStep] = useState('location');
   const [tier, setTier] = useState('monthly');
@@ -365,7 +395,12 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
     }
     if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required';
     if (!formData.insuranceCarrier.trim()) errors.insuranceCarrier = 'Insurance carrier is required';
-    if (!formData.startDate) errors.startDate = 'Start date is required';
+    if (!formData.startDate) {
+      errors.startDate = 'Start date is required';
+    } else if (formData.startDate < getEarliestStartDate()) {
+      // String comparison works because both are YYYY-MM-DD
+      errors.startDate = 'Start date must be tomorrow or later';
+    }
 
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -444,7 +479,7 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
       }
       
       // Format start date for display
-      const startDate = data.startDate ? new Date(data.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const startDate = formatStartDate(data.startDate || formData.startDate);
       onSuccess({ ...data, tier, name: formData.name, paymentFailed: data.requiresPaymentUpdate, startDate });
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -505,8 +540,12 @@ function SignupForm({ tier, locationId, locationName, onSuccess, inviteToken, pr
         </div>
         <div>
           <label className={labelClass}>Desired Start Date</label>
-          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={inputClass} />
-          {fieldErrors.startDate && <p className="mt-1 text-xs text-destructive">{fieldErrors.startDate}</p>}
+          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} min={getEarliestStartDate()} className={inputClass} />
+          {fieldErrors.startDate ? (
+            <p className="mt-1 text-xs text-destructive">{fieldErrors.startDate}</p>
+          ) : (
+            <p className="mt-1 text-xs text-espresso/50">Earliest start date is tomorrow. Your first payment is charged on this date.</p>
+          )}
         </div>
 
         <div>
