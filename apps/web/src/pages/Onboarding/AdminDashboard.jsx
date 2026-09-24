@@ -23,36 +23,45 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
+    console.log('Page loaded, hash from URL:', hash);
+    
     if (hash) {
+      console.log('Hash found, setting token and fetching data...');
       setToken(hash);
       localStorage.setItem('adminToken', hash);
       window.history.replaceState(null, '', window.location.pathname);
-      fetchData(hash);
+      fetchDataWithToken(hash);
     } else {
       const savedToken = localStorage.getItem('adminToken');
+      console.log('No hash in URL, checking localStorage. Saved token:', savedToken ? 'exists' : 'none');
       if (savedToken) {
         setToken(savedToken);
-        fetchData(savedToken);
+        fetchDataWithToken(savedToken);
       }
     }
   }, []);
 
-  const showSuccess = (msg) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(''), 3000);
-  };
-
-  const fetchData = async (authToken) => {
+  const fetchDataWithToken = async (authToken) => {
+    setLoading(true);
     try {
-      console.log('Fetching admin data with token...');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/subscriptions/${authToken}`);
+      console.log('Fetching admin data with token:', authToken.substring(0, 20) + '...');
+      const url = `${import.meta.env.VITE_API_URL}/api/admin/subscriptions/${authToken}`;
+      console.log('API URL:', url);
+      
+      const response = await fetch(url);
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
+        console.error('Response not ok. Status:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error data:', errorData);
         setError('Invalid or expired admin link');
         setLoading(false);
         return;
       }
+      
       const result = await response.json();
-      console.log('Admin data loaded:', result);
+      console.log('Admin data loaded successfully:', result);
       
       const locResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/locations`);
       let locations = [];
@@ -65,7 +74,7 @@ export function AdminDashboardPage() {
       setLoading(false);
     } catch (err) {
       console.error('Error loading admin data:', err);
-      setError('Failed to load admin data');
+      setError('Failed to load admin data: ' + err.message);
       setLoading(false);
     }
   };
@@ -115,7 +124,7 @@ export function AdminDashboardPage() {
         console.log('Bio update successful:', result);
         setEditingBio(null);
         showSuccess('Bio updated successfully.');
-        await fetchData(token);
+        await fetchDataWithToken(token);
       } else {
         const d = await response.json();
         console.error('Bio update failed:', d);
@@ -137,7 +146,7 @@ export function AdminDashboardPage() {
       });
       if (response.ok) {
         showSuccess(stylist.is_published ? 'Stylist unpublished.' : 'Stylist published.');
-        await fetchData(token);
+        await fetchDataWithToken(token);
       } else {
         alert('Failed to update publish status');
       }
