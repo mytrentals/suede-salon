@@ -22,7 +22,7 @@ function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/meet-the-team" element={<MeetTheTeamPage />} />
-        <Route path="/meet-the-team/:id" element={<StylistBioPage />} />
+        <Route path="/meet-the-team/:slug" element={<StylistBioPage />} />
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLoginPage />} />

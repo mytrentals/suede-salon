@@ -2,20 +2,43 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import SiteLayout from '@/components/SiteLayout';
 
+// Helper function to generate slug from name
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]/g, '');
+};
+
 export function StylistBioPage() {
   const [stylist, setStylist] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { id } = useParams();
+  const { slug } = useParams();
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/api/stylists/${id}`)
-      .then(r => r.json())
-      .then(d => {
-        setStylist(d.stylist);
+    const fetchStylist = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stylists`);
+        if (!response.ok) throw new Error('Failed to load stylists');
+        const data = await response.json();
+        
+        // Find stylist by matching slug
+        const stylistList = data.stylists || [];
+        const found = stylistList.find(s => generateSlug(s.name) === slug);
+        
+        if (found) {
+          setStylist(found);
+        }
+      } catch (err) {
+        console.error('Error loading stylist:', err);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [id]);
+      }
+    };
+
+    fetchStylist();
+  }, [slug]);
 
   if (loading) return <SiteLayout><div className="flex items-center justify-center min-h-screen">Loading...</div></SiteLayout>;
   if (!stylist) return <SiteLayout><div className="flex items-center justify-center min-h-screen">Stylist not found</div></SiteLayout>;

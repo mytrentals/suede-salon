@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SiteLayout from '@/components/SiteLayout';
 
+// Helper function to generate slug from name
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]/g, '');
+};
+
 export function MeetTheTeamPage() {
   const [stylists, setStylists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +73,7 @@ export function MeetTheTeamPage() {
                 {stylists.map(stylist => (
                   <Link
                     key={stylist.id}
-                    to={`/meet-the-team/${stylist.id}`}
+                    to={`/meet-the-team/${generateSlug(stylist.name)}`}
                     className="group rounded-lg border border-border bg-white overflow-hidden hover:shadow-lg transition-all duration-300"
                   >
                     {/* Headshot */}

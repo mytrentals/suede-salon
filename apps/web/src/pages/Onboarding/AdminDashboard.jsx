@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import SiteLayout from '@/components/SiteLayout';
 
+// Helper function to generate slug from stylist name
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]/g, '');
+};
+
 export function AdminDashboardPage() {
   const { token } = useParams();
   const [data, setData] = useState(null);
@@ -462,7 +471,7 @@ export function AdminDashboardPage() {
                       </button>
                       {s.is_published && (
                         <a
-                          href={`/meet-the-team/${s.id}`}
+                          href={`/meet-the-team/${generateSlug(s.name)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs font-semibold text-navy hover:text-hunter transition-colors text-center"
