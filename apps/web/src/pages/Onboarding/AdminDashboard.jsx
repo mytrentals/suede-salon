@@ -295,7 +295,7 @@ export function AdminDashboardPage() {
 
   return (
     <SiteLayout>
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-6 py-12 pt-32">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="font-display text-4xl font-semibold text-navy">Admin Dashboard</h1>
           <button onClick={() => setShowEmailForm(!showEmailForm)} className="text-xs font-semibold uppercase tracking-widest text-navy hover:text-hunter transition-colors">Request New Link</button>
