@@ -919,7 +919,7 @@ export function AdminDashboardPage() {
           </div>
         </div>
       )}
-
+      </div>
     </SiteLayout>
   );
 }
