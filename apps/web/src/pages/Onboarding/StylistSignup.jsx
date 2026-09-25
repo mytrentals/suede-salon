@@ -49,7 +49,9 @@ export function StylistSignupPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const invite = params.get('invite');
+    // Invite emails link to /stylist/signup/<token>; also accept ?invite=<token>
+    const pathMatch = window.location.pathname.match(/\/stylist\/signup\/([A-Za-z0-9]+)/);
+    const invite = params.get('invite') || (pathMatch ? pathMatch[1] : null);
     if (invite) {
       setInviteToken(invite);
       validateInvite(invite);
@@ -75,7 +77,8 @@ export function StylistSignupPage() {
         name: data.invite.name,
         address: data.invite.address,
         max_chairs: data.invite.max_chairs || 7,
-        available_chairs: data.invite.max_chairs || 7
+        available_chairs: data.invite.max_chairs || 7,
+        email: data.invite.email || ''
       }]);
       setLocationId(data.invite.location_id);
       setInviteValidating(false);
