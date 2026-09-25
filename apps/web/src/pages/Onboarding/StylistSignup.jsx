@@ -77,7 +77,7 @@ export function StylistSignupPage() {
         name: data.invite.name,
         address: data.invite.address,
         max_chairs: data.invite.max_chairs || 7,
-        available_chairs: data.invite.max_chairs || 7,
+        available_chairs: data.invite.available_chairs ?? (data.invite.max_chairs || 7),
         email: data.invite.email || ''
       }]);
       setLocationId(data.invite.location_id);
