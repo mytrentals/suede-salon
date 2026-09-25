@@ -35,6 +35,7 @@ export function AdminDashboardPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', locationId: '' });
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteActionId, setInviteActionId] = useState(null);
   const [showAddLocation, setShowAddLocation] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
   const [confirmDeleteLocation, setConfirmDeleteLocation] = useState(null);
@@ -112,6 +113,35 @@ export function AdminDashboardPage() {
   };
 
   const showSuccess = (msg) => { setSuccessMessage(msg); setTimeout(() => setSuccessMessage(null), 4000); };
+
+
+  const handleResendInvite = async (invite) => {
+    setInviteActionId(invite.id);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}/resend`, {
+        method: 'POST', headers: { 'x-admin-token': token },
+      });
+      if (response.ok) { showSuccess(`New invite link sent to ${invite.email}`); await fetchData(); }
+      else { const d = await response.json().catch(() => ({})); alert(d.error || 'Failed to resend invite'); }
+    } catch (err) { alert('Error resending invite'); }
+    setInviteActionId(null);
+  };
+
+  const handleDeleteInvite = async (invite) => {
+    const msg = invite.used
+      ? `Delete the invite record for ${invite.email}? Their stylist account is not affected.`
+      : `Delete the pending invite for ${invite.email}? Their link will stop working.`;
+    if (!confirm(msg)) return;
+    setInviteActionId(invite.id);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/invite/${invite.id}`, {
+        method: 'DELETE', headers: { 'x-admin-token': token },
+      });
+      if (response.ok) { showSuccess(`Invite for ${invite.email} deleted`); await fetchData(); }
+      else { const d = await response.json().catch(() => ({})); alert(d.error || 'Failed to delete invite'); }
+    } catch (err) { alert('Error deleting invite'); }
+    setInviteActionId(null);
+  };
 
   const handleResendSigningLink = async (stylist) => {
     setResendLinkLoading(true);
@@ -420,17 +450,41 @@ export function AdminDashboardPage() {
                     <th className="px-6 py-4 text-left font-semibold text-navy">Location</th>
                     <th className="px-6 py-4 text-left font-semibold text-navy">Status</th>
                     <th className="px-6 py-4 text-left font-semibold text-navy">Sent</th>
+                    <th className="px-6 py-4 text-left font-semibold text-navy">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {invites.map(i => (
-                    <tr key={i.id} className="border-b border-border hover:bg-card/50 transition-colors">
-                      <td className="px-6 py-4 text-espresso">{i.email}</td>
-                      <td className="px-6 py-4 text-espresso/70">{i.location_name || '—'}</td>
-                      <td className="px-6 py-4"><span className={`text-xs font-semibold uppercase tracking-widest px-2 py-1 rounded-sm ${i.used ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>{i.used ? 'Accepted' : 'Pending'}</span></td>
-                      <td className="px-6 py-4 text-espresso/70 text-xs">{new Date(i.created_at).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
+                  {invites.length === 0 && (
+                    <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-espresso/50">No invites yet. Use "+ Send Invite" to invite a stylist.</td></tr>
+                  )}
+                  {invites.map(i => {
+                    const isExpired = !i.used && i.expires_at && new Date(i.expires_at) < new Date();
+                    const status = i.used ? 'Accepted' : isExpired ? 'Expired' : 'Pending';
+                    const statusClass = i.used ? 'bg-green-100 text-green-800' : isExpired ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
+                    const busy = inviteActionId === i.id;
+                    return (
+                      <tr key={i.id} className="border-b border-border hover:bg-card/50 transition-colors">
+                        <td className="px-6 py-4 text-espresso">{i.email}</td>
+                        <td className="px-6 py-4 text-espresso/70">{i.location_name || '—'}</td>
+                        <td className="px-6 py-4"><span className={`text-xs font-semibold uppercase tracking-widest px-2 py-1 rounded-sm ${statusClass}`}>{status}</span></td>
+                        <td className="px-6 py-4 text-espresso/70 text-xs">{new Date(i.created_at).toLocaleDateString()}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            {!i.used && (
+                              <button onClick={() => handleResendInvite(i)} disabled={busy}
+                                className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-navy hover:text-navy transition-colors whitespace-nowrap disabled:opacity-40">
+                                {busy ? '…' : 'Resend'}
+                              </button>
+                            )}
+                            <button onClick={() => handleDeleteInvite(i)} disabled={busy}
+                              className="rounded-sm border border-border px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.1em] text-espresso/60 hover:border-destructive hover:text-destructive transition-colors whitespace-nowrap disabled:opacity-40">
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
