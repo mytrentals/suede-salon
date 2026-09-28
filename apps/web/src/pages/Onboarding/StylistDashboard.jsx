@@ -150,12 +150,14 @@ export function StylistDashboardPage() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stylist/request-cancellation/${token}`, {
         method: 'POST',
       });
+      const data = await response.json().catch(() => ({}));
       if (response.ok) {
-        setCancelSuccess(true);
+        setCancelSuccess(data.message || true);
         setShowCancelModal(false);
+        setCancelConfirmed(false);
         fetchDashboard();
       } else {
-        alert('Failed to submit cancellation. Please contact the salon directly.');
+        alert(data.error || 'Failed to submit cancellation. Please contact the salon directly.');
       }
     } catch (err) {
       alert('Error submitting cancellation. Please try again.');
@@ -269,7 +271,8 @@ export function StylistDashboardPage() {
           {cancelSuccess && (
             <div className="mb-8 rounded-md border border-camel/40 bg-card px-6 py-4">
               <p className="text-sm text-espresso">
-                ✓ Your cancellation request has been submitted. The salon has been notified and your subscription will remain active for 30 days.
+                ✓ Your cancellation request has been submitted and the salon has been notified.{' '}
+                {typeof cancelSuccess === 'string' ? cancelSuccess : ''} A confirmation email is on its way.
               </p>
             </div>
           )}
@@ -310,8 +313,8 @@ export function StylistDashboardPage() {
               {hasCancellationRequest && (
                 <div className="mt-6 rounded-sm border border-camel/30 bg-background px-4 py-3">
                   <p className="text-xs text-espresso/70">
-                    Your subscription will remain active until{' '}
-                    <strong>{new Date(subscription.requestedCancellationDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.
+                    Your chair rental ends on{' '}
+                    <strong>{formatDate(subscription.requestedCancellationDate)}</strong>. You'll be billed as normal until then, and billing stops automatically after that date.
                   </p>
                 </div>
               )}
@@ -438,9 +441,9 @@ export function StylistDashboardPage() {
           <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
             <h2 className="font-display text-2xl font-semibold text-navy mb-3">Request Cancellation</h2>
             <p className="text-sm text-espresso/70 leading-relaxed mb-6">
-              Per your rental agreement, <strong>30 days written notice</strong> is required. 
-              By submitting this request, you confirm that you have already provided written notice to the salon.
-              Your subscription will remain active for 30 more days.
+              Per your rental agreement, <strong>30 days written notice</strong> is required and there is no prorating.
+              Your notice period starts today. Your rental ends at the end of the billing {subscription?.tier === 'weekly' ? 'week' : 'month'} in
+              which your 30-day notice ends, and you'll be billed as normal until then. You'll see the exact end date after submitting.
             </p>
 
             <label className="flex items-start gap-3 cursor-pointer mb-8">
