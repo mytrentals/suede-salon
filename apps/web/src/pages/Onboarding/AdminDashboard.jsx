@@ -262,6 +262,25 @@ export function AdminDashboardPage() {
     }
   };
 
+  const handleDeleteBio = async (stylist) => {
+    if (!confirm(`Delete ${stylist.name}'s bio? This clears their headshot, bio, services and links, and removes them from Meet the Team. Their account and billing are not affected.`)) return;
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stylists/${stylist.id}/bio`, {
+        method: 'DELETE',
+        headers: { 'x-admin-token': token },
+      });
+      if (response.ok) {
+        showSuccess(`${stylist.name}'s bio deleted.`);
+        await fetchData();
+      } else {
+        const d = await response.json().catch(() => ({}));
+        alert(d.error || 'Failed to delete bio');
+      }
+    } catch (err) {
+      alert('Error deleting bio');
+    }
+  };
+
   const handleDeactivate = async (stylist) => {
     setActionLoading(true);
     try {
@@ -539,6 +558,14 @@ export function AdminDashboardPage() {
                         >
                           View Page →
                         </a>
+                      )}
+                      {(s.introduction || s.headshot_url || s.experience || s.services_offered || s.glossgenius_link || s.instagram_handle) && (
+                        <button
+                          onClick={() => handleDeleteBio(s)}
+                          className="rounded-sm border border-border px-4 py-2 text-xs font-semibold uppercase tracking-widest text-espresso/60 hover:border-destructive hover:text-destructive transition-colors"
+                        >
+                          Delete Bio
+                        </button>
                       )}
                     </div>
                   </div>
