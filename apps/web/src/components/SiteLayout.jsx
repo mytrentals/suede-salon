@@ -103,11 +103,30 @@ export function SiteFooter() {
         <footer className="border-t border-border bg-navy text-primary-foreground">
             <div className="mx-auto grid max-w-[72rem] gap-10 px-6 py-16 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                    <img
-                        src="/suede-logo.png"
-                        alt="Suede Salon crest"
-			className="mb-4 h-20 w-auto object-contain"
-                    />
+                    {/* Same logo file as the header, recolored via CSS mask to match the cream background */}
+                    <div
+                        role="img"
+                        aria-label="Suede Salon crest"
+                        className="mb-4 inline-block bg-background"
+                        style={{
+                            WebkitMaskImage: 'url(/suede-logo.png)',
+                            maskImage: 'url(/suede-logo.png)',
+                            WebkitMaskRepeat: 'no-repeat',
+                            maskRepeat: 'no-repeat',
+                            WebkitMaskSize: 'contain',
+                            maskSize: 'contain',
+                            WebkitMaskPosition: 'left center',
+                            maskPosition: 'left center',
+                        }}
+                    >
+                        {/* Invisible copy keeps the logo's natural size and aspect ratio */}
+                        <img
+                            src="/suede-logo.png"
+                            alt=""
+                            aria-hidden="true"
+                            className="block h-20 w-auto object-contain opacity-0"
+                        />
+                    </div>
                     <p className="mt-4 max-w-xs text-sm leading-relaxed text-background/70">
                         A boutique chair-rental salon in Town and Country, Missouri — locally owned,
                         personally maintained, and appointment-only through independent stylists.
