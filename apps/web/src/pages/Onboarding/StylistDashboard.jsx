@@ -271,8 +271,7 @@ export function StylistDashboardPage() {
           {cancelSuccess && (
             <div className="mb-8 rounded-md border border-camel/40 bg-card px-6 py-4">
               <p className="text-sm text-espresso">
-                ✓ Your cancellation request has been submitted and the salon has been notified.{' '}
-                {typeof cancelSuccess === 'string' ? cancelSuccess : ''} A confirmation email is on its way.
+                ✓ {typeof cancelSuccess === 'string' ? cancelSuccess : 'Your cancellation request has been submitted.'} The salon has been notified and a confirmation email is on its way.
               </p>
             </div>
           )}
@@ -334,7 +333,7 @@ export function StylistDashboardPage() {
                     Change Plan
                   </button>
                 )}
-                {isActive && !hasCancellationRequest && (
+                {['active', 'pending_agreement'].includes(subscription?.status) && !hasCancellationRequest && (
                   <button
                     onClick={() => setShowCancelModal(true)}
                     className="w-full rounded-sm border border-espresso/30 py-3.5 text-[0.74rem] uppercase tracking-[0.22em] text-espresso/60 transition-colors hover:border-destructive hover:text-destructive"
@@ -441,9 +440,13 @@ export function StylistDashboardPage() {
           <div className="w-full max-w-md rounded-md border border-border bg-background p-8 shadow-xl">
             <h2 className="font-display text-2xl font-semibold text-navy mb-3">Request Cancellation</h2>
             <p className="text-sm text-espresso/70 leading-relaxed mb-6">
-              Per your rental agreement, <strong>30 days written notice</strong> is required and there is no prorating.
-              Your notice period starts today. Your rental ends at the end of the billing {subscription?.tier === 'weekly' ? 'week' : 'month'} in
-              which your 30-day notice ends, and you'll be billed as normal until then. You'll see the exact end date after submitting.
+              {notStartedYet ? (
+                <>Your chair rental hasn't started yet, so cancelling now ends it <strong>immediately with no charge</strong>. This can't be undone. You'd need a new invitation to rejoin.</>
+              ) : (
+                <>Per your rental agreement, <strong>30 days written notice</strong> is required and there is no prorating.
+                Your notice period starts today. Your rental ends at the end of the billing {subscription?.tier === 'weekly' ? 'week' : 'month'} in
+                which your 30-day notice ends, and you'll be billed as normal until then. You'll see the exact end date after submitting.</>
+              )}
             </p>
 
             <label className="flex items-start gap-3 cursor-pointer mb-8">
@@ -454,7 +457,9 @@ export function StylistDashboardPage() {
                 className="mt-0.5 h-4 w-4 cursor-pointer accent-navy"
               />
               <span className="text-sm text-espresso leading-relaxed">
-                I confirm I have given 30 days written notice to Suede Salon and understand no refunds will be issued.
+                {notStartedYet
+                  ? 'I understand my chair rental will be cancelled immediately.'
+                  : 'I confirm I have given 30 days written notice to Suede Salon and understand no refunds will be issued.'}
               </span>
             </label>
 
