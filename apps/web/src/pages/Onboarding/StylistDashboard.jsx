@@ -198,7 +198,9 @@ export function StylistDashboardPage() {
   const hasCancellationRequest = !!subscription?.requestedCancellationDate;
   const nextBilling = formatDate(subscription?.currentPeriodEnd);
   const startDate = stylist?.start_date ? String(stylist.start_date).slice(0, 10) : null;
-  const notStartedYet = !!startDate && startDate > todayCentral();
+  // Stripe's billing status wins; the start date is only a fallback if it's unavailable
+  const notStartedYet = subscription?.billingStarted === false
+    || (subscription?.billingStarted == null && !!startDate && startDate > todayCentral());
   const pendingTier = subscription?.pendingTier;
   const pendingEffective = formatDate(subscription?.pendingTierEffective);
   const canChangePlan = ['active', 'pending_agreement'].includes(subscription?.status) && !hasCancellationRequest;
