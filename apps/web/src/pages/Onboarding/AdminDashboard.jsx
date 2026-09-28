@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import SiteLayout from '@/components/SiteLayout';
+import AdminReports from './AdminReports';
 
 // Helper function to generate slug from stylist name
 const generateSlug = (name) => {
@@ -335,7 +336,7 @@ export function AdminDashboardPage() {
 
         {/* Tab Navigation */}
         <div className="mb-8 border-b border-border flex gap-8">
-          {['stylists', 'locations', 'invites', 'bios'].map(tab => (
+          {['stylists', 'locations', 'invites', 'bios', 'reports'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -347,6 +348,7 @@ export function AdminDashboardPage() {
               {tab === 'locations' && 'Locations'}
               {tab === 'invites' && 'Invites'}
               {tab === 'bios' && 'Meet the Team'}
+              {tab === 'reports' && 'Reports'}
             </button>
           ))}
         </div>
@@ -490,6 +492,9 @@ export function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* REPORTS TAB */}
+        {activeTab === 'reports' && <AdminReports token={token} />}
 
         {/* MEET THE TEAM / BIOS TAB */}
         {activeTab === 'bios' && (
