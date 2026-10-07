@@ -22,7 +22,13 @@ export function MeetTheTeamPage() {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/stylists`);
         if (!response.ok) throw new Error('Failed to load stylists');
         const data = await response.json();
-        setStylists(data.stylists || []);
+        // Owner (Mackenzie) always first; everyone else keeps the API's order
+        const list = data.stylists || [];
+        const sorted = [
+          ...list.filter(s => s.is_owner),
+          ...list.filter(s => !s.is_owner),
+        ];
+        setStylists(sorted);
       } catch (err) {
         console.error('Error loading stylists:', err);
         setError('Failed to load stylists');
