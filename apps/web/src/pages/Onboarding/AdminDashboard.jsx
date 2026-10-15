@@ -22,6 +22,7 @@ export function AdminDashboardPage() {
   const [adminEmail, setAdminEmail] = useState('');
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [requestingLink, setRequestingLink] = useState(false);
+  const [linkStatus, setLinkStatus] = useState(null); // { type: 'success' | 'error', text }
   const [activeTab, setActiveTab] = useState('stylists');
   const [editingStylest, setEditingStylest] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -73,7 +74,13 @@ export function AdminDashboardPage() {
   const fetchData = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/subscriptions/${token}`);
-      if (!response.ok) { setError('Invalid or expired admin link'); setLoading(false); return; }
+      if (!response.ok) {
+        // Expired/invalid link: forget it so we don't keep redirecting back to it
+        sessionStorage.removeItem('adminToken');
+        setError('This admin link is invalid or has expired. Request a new one below.');
+        setLoading(false);
+        return;
+      }
       const result = await response.json();
       
       // Fetch locations
@@ -102,14 +109,20 @@ export function AdminDashboardPage() {
   const requestAdminLink = async (e) => {
     e.preventDefault();
     setRequestingLink(true);
+    setLinkStatus(null);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/request-link`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: adminEmail }),
+        body: JSON.stringify({ email: adminEmail.trim() }),
       });
-      setError(response.ok ? 'Magic link sent! Check your email.' : 'Email not recognized.');
-      if (response.ok) setShowEmailForm(false);
-    } catch (err) { setError('Error requesting link.'); }
+      if (response.ok) {
+        setLinkStatus({ type: 'success', text: `Magic link sent to ${adminEmail.trim()}. Check your email.` });
+        setAdminEmail('');
+      } else {
+        const d = await response.json().catch(() => ({}));
+        setLinkStatus({ type: 'error', text: d.error === 'Unauthorized' ? 'Email not recognized as admin.' : (d.error || 'Failed to send link.') });
+      }
+    } catch (err) { setLinkStatus({ type: 'error', text: 'Error requesting link. Please try again.' }); }
     setRequestingLink(false);
   };
 
@@ -306,21 +319,34 @@ export function AdminDashboardPage() {
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center"><p className="text-navy">Loading...</p></div>;
-  if (!token && error) return (
-    <SiteLayout><div className="mx-auto max-w-2xl px-6 py-12">
+  const requestLinkForm = (
+    <>
+      {linkStatus && (
+        <div className={`mb-4 rounded-sm border px-4 py-3 ${linkStatus.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+          <p className={`text-sm ${linkStatus.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>{linkStatus.text}</p>
+        </div>
+      )}
+      <form onSubmit={requestAdminLink} className="space-y-4">
+        <div>
+          <label className="text-sm font-semibold text-navy uppercase tracking-widest">Admin Email</label>
+          <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required
+            className="mt-2 w-full rounded-sm border border-border bg-background px-4 py-3 text-sm text-espresso focus:border-navy focus:outline-none" />
+        </div>
+        <button type="submit" disabled={requestingLink}
+          className="w-full rounded-sm bg-ink py-3 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-40">
+          {requestingLink ? 'Sending...' : 'Request Magic Link'}
+        </button>
+      </form>
+    </>
+  );
+
+  // No valid session (expired link, bad link, or no link at all) -> show the request form
+  if (!data) return (
+    <SiteLayout><div className="mx-auto max-w-2xl px-6 pb-12 pt-32">
       <div className="rounded-md border border-border bg-card p-8">
         <h1 className="font-display text-3xl font-semibold text-navy mb-4">Admin Access</h1>
-        <form onSubmit={requestAdminLink} className="space-y-4">
-          <div>
-            <label className="text-sm font-semibold text-navy uppercase tracking-widest">Admin Email</label>
-            <input type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required
-              className="mt-2 w-full rounded-sm border border-border bg-background px-4 py-3 text-sm text-espresso focus:border-navy focus:outline-none" />
-          </div>
-          <button type="submit" disabled={requestingLink}
-            className="w-full rounded-sm bg-ink py-3 text-xs font-semibold uppercase tracking-widest text-white disabled:opacity-40">
-            {requestingLink ? 'Sending...' : 'Request Magic Link'}
-          </button>
-        </form>
+        {error && !linkStatus && <p className="mb-4 text-sm text-espresso/70">{error}</p>}
+        {requestLinkForm}
       </div>
     </div></SiteLayout>
   );
@@ -343,8 +369,13 @@ export function AdminDashboardPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between gap-4">
             <h1 className="font-display text-4xl font-semibold text-navy">Admin Dashboard</h1>
-            <button onClick={() => setShowEmailForm(!showEmailForm)} className="text-xs font-semibold uppercase tracking-widest text-navy hover:text-hunter transition-colors whitespace-nowrap">Request New Link</button>
+            <button onClick={() => { setShowEmailForm(!showEmailForm); setLinkStatus(null); }} className="text-xs font-semibold uppercase tracking-widest text-navy hover:text-hunter transition-colors whitespace-nowrap">Request New Link</button>
           </div>
+          {showEmailForm && (
+            <div className="mt-6 max-w-md rounded-md border border-border bg-card p-6">
+              {requestLinkForm}
+            </div>
+          )}
         </div>
 
         {successMessage && (
